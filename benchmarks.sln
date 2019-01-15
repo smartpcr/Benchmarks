@@ -137,9 +137,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "haproxy", "haproxy", "{662D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitResolver", "src\CommitResolver\CommitResolver.csproj", "{618BFF48-F91C-47F3-90CB-99AF637D0757}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks.UI.Server", "Benchmarks.UI.Server\Benchmarks.UI.Server.csproj", "{55D9F5E1-7DBE-4AD2-84AF-00533A51E62E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks.UI.Server", "src\Benchmarks.UI.Server\Benchmarks.UI.Server.csproj", "{55D9F5E1-7DBE-4AD2-84AF-00533A51E62E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks.UI.App", "Benchmarks.UI.App\Benchmarks.UI.App.csproj", "{13EB3916-288E-4746-BF68-F2B3BB5018E4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks.UI.App", "src\Benchmarks.UI.App\Benchmarks.UI.App.csproj", "{13EB3916-288E-4746-BF68-F2B3BB5018E4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
