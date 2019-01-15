@@ -3,5 +3,5 @@
 #echo on
 set -x
 
-docker stop benchmarks-downstream
-docker rm benchmarks-downstream
+docker stop benchmarks-ui
+docker rm benchmarks-ui

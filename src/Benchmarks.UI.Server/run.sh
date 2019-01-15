@@ -8,8 +8,8 @@ docker run \
     -d \
     -it \
     --init \
-    --name benchmarks-downstream \
+    --name benchmarks-ui \
     --network host \
     --restart always \
-    benchmarks-downstream \
+    benchmarks-ui \
     --urls http://*:5001
