@@ -1,13 +1,19 @@
 ﻿using System.IO;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace Benchmarks.UI.Server.Controllers
 {
     [Route("api/download")]
     public class DownloadController : ControllerBase
     {
-        static string _driverPath = @"C:\Users\sebros\Documents\Projects\benchmarks\src\BenchmarksDriver\bin\Debug\netcoreapp2.1";
+        private string _driverPath;
 
+        public DownloadController(IConfiguration configuration)
+        {
+            _driverPath = configuration["driverPath"];
+        }
+        
         [HttpGet]
         [Route("{filename}")]
         [RequestSizeLimit(100_000_000)]

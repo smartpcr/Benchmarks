@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="BlazoredLocalStorage" Version="0.3.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="2.1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Blazor.Browser" Version="0.7.0" />
     <PackageReference Include="Microsoft.AspNetCore.Blazor.Build" Version="0.7.0" PrivateAssets="all" />
   </ItemGroup>

@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace Benchmarks.UI.App.Services
 {
     public class JobsService
     {
-        static string _driverPath = @"C:\Users\sebros\Documents\Projects\benchmarks\src\BenchmarksDriver\bin\Debug\netcoreapp2.1";
-
         private const string _plaintextJobs = "-j https://raw.githubusercontent.com/aspnet/Benchmarks/master/src/Benchmarks/benchmarks.plaintext.json";
         private const string _htmlJobs = "-j https://raw.githubusercontent.com/aspnet/Benchmarks/master/src/Benchmarks/benchmarks.html.json";
         private const string _jsonJobs = "-j https://raw.githubusercontent.com/aspnet/Benchmarks/master/src/Benchmarks/benchmarks.json.json";
@@ -25,6 +24,13 @@ namespace Benchmarks.UI.App.Services
         //private static const string _http2Jobs = "--clientName H2Load -p Streams=70 --headers None --connections $CPU_COUNT --clientThreads $CPU_COUNT";
 
         private ConcurrentDictionary<string, Process> _processes = new ConcurrentDictionary<string, Process>();
+
+        private string _driverPath;
+
+        public JobsService(IConfiguration configuration)
+        {
+            _driverPath = configuration["driverPath"];
+        }
 
         public Process GetProcessById(string id)
         {

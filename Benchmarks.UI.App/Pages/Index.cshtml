@@ -1,6 +1,7 @@
 ﻿@page "/"
 @inject JobsService JobsService
 @inject Blazored.Storage.ILocalStorage LocalStorage
+@inject IJSRuntime JSRuntime
 @using Benchmarks.UI.App.Services
 @using System.Web
 @using System.Collections.Specialized
@@ -41,6 +42,7 @@
             <option value="2.2.*">2.2.x servicing</option>
             <option value="2.1">2.1.x</option>
             <option value="2.1.*">2.1.x servicing</option>
+            <option value="Custom">Custom</option>
         </select>
         <span class="text-muted form-text small">The ASP.NET Core version to use.</span>
     </div>
@@ -54,6 +56,7 @@
             <option value="2.2.*">2.2 servicing</option>
             <option value="2.1">2.1.*</option>
             <option value="2.1.*">2.1 servicing</option>
+            <option value="Custom">Custom</option>
         </select>
         <span class="text-muted form-text small">The .NET Core runtime version to use.</span>
     </div>
@@ -81,6 +84,36 @@
             <label class="custom-control-label" for="compareCheckbox">Compare to</label>
             <span class="text-muted form-text small">Check to compare the results to a previously saved job.</span>
         </div>
+
+        @if (compare)
+        {
+            <select class="form-control" bind="@compareToJob">
+                @foreach (var savedJob in savedJobs)
+                {
+                    <option value="@savedJob.Key">@savedJob.Key</option>
+                }
+            </select>
+        }
+    </div>
+
+    <div class="form-group col-md-4 col-xl-2">
+        @if (aspnetcore == "Custom")
+        {
+            <input type="text" class="form-control" bind="customAspNetCore" />
+            <span class="text-muted form-text small">Specific version of ASP.NET Core. <a target="_blank" href="https://dotnet.myget.org/feed/aspnetcore-dev/package/nuget/Microsoft.AspNetCore.App">Complete list.</a></span>
+        }
+    </div>
+
+    <div class="form-group col-md-4 col-xl-2">
+        @if (runtime == "Custom")
+        {
+            <input type="text" class="form-control" bind="customRuntime" />
+            <span class="text-muted form-text small">Specific version of.NET Core. <a target="_blank" href="https://dotnet.myget.org/feed/dotnet-core/package/nuget/Microsoft.NetCore.App">Complete list.</a></span>
+        }
+    </div>
+
+
+    <div class="form-group col-md-6 col-lg-2">
 
         @if (compare)
         {
@@ -177,7 +210,7 @@
     <div class="form-group col-lg-3">
         <div class="custom-file">
             <input type="file" class="custom-file-input" id="customFile" ref="outputFile" onchange="@UploadOutputFile" />
-            <label class="custom-file-label" for="customFile">Output Files</label>
+            <label class="custom-file-label" for="customFile">Custom Files</label>
             <span class="text-muted form-text small">This file will be copied in the published folder.</span>
         </div>
 
@@ -217,7 +250,7 @@
 <div class="row">
     <div class="col-md-6">
         <label>Output</label>
-        <pre class="output">@standardOutput</pre>
+        <pre class="output" ref="outputPre">@standardOutput</pre>
     </div>
 
     @if (_artifacts.Count > 0)
@@ -241,23 +274,24 @@
 </div>
 
 @functions {
-    string currentServer;
-    string scenario;
-    string warmup, duration, samples, extremes, database, host;
-    string processId;
-    string jobUniqueId, comparedToUniqueId;
-    bool quiet, markdown, collect, fetch;
-    bool save, compare;
-    string description, compareToJob;
-    string aspnetcore, runtime;
-    Dictionary<string, string> savedJobs = new Dictionary<string, string>();
+        string currentServer;
+        string scenario;
+        string warmup, duration, samples, extremes, database, host;
+        string processId;
+        string jobUniqueId, comparedToUniqueId;
+        bool quiet, markdown, collect, fetch;
+        bool save, compare;
+        string description, compareToJob;
+        string aspnetcore, runtime;
+        string customAspNetCore, customRuntime;
+        Dictionary<string, string> savedJobs = new Dictionary<string, string>();
 
-    ElementRef outputFile, nugetPackage, descriptionInput;
-    NameValueCollection _nugetPackages = new NameValueCollection();
-    NameValueCollection _outputFiles = new NameValueCollection();
-    List<string> _artifacts = new List<string>();
+        ElementRef outputFile, nugetPackage, descriptionInput, outputPre;
+        NameValueCollection _nugetPackages = new NameValueCollection();
+        NameValueCollection _outputFiles = new NameValueCollection();
+        List<string> _artifacts = new List<string>();
 
-    StringBuilder standardOutput = new StringBuilder();
+        StringBuilder standardOutput = new StringBuilder();
 
     protected override async Task OnInitAsync()
     {
@@ -286,6 +320,31 @@
             return;
         }
 
+        if (aspnetcore == "Custom")
+        {
+            // Matching ASP.NET Core is not available in this case
+            if (String.IsNullOrWhiteSpace(runtime))
+            {
+                standardOutput.Append("The 'runtime' field has to be a specific version when using a custom ASP.NET Core version.");
+                return;
+            }
+
+            if (String.IsNullOrWhiteSpace(customAspNetCore))
+            {
+                standardOutput.Append("A custom ASP.NET Core version needs to be specified.");
+                return;
+            }
+        }
+
+        if (runtime == "Custom")
+        {
+            if (String.IsNullOrWhiteSpace(customRuntime))
+            {
+                standardOutput.Append("A custom.NET Core version needs to be specified.");
+                return;
+            }
+        }
+
         // Stop any running Job
         await StopJob();
 
@@ -295,7 +354,13 @@
 
         var arguments = await BuildArguments();
 
-        processId = JobsService.StartDriver(arguments, standardOutput, StateHasChanged, OnJobFinished);
+        processId = JobsService.StartDriver(arguments, standardOutput, OnStandardOutputChanged, OnJobFinished);
+    }
+
+    async void OnStandardOutputChanged()
+    {
+        StateHasChanged();
+        await JSRuntime.InvokeAsync<string>("scrollToBottom", outputPre);
     }
 
     Task StopJob()
@@ -367,9 +432,15 @@
 
         args.Append($"--duration {duration} ");
 
-        args.Append($"-x {extremes} ").Append(" ");
+        if (extremes != "1")
+        {
+            args.Append($"-x {extremes} ").Append(" ");
+        }
 
-        args.Append($"-i {samples} ");
+        if (samples != "0")
+        {
+            args.Append($"-i {samples} ");
+        }
 
         if (!String.IsNullOrEmpty(database))
         {
@@ -424,15 +495,35 @@
             args.Append($"--description \"{description}\" ");
         }
 
-        args.Append($"--aspNetCoreVersion \"{aspnetcore}\" ");
-
-        if (String.IsNullOrEmpty(runtime))
+        if (aspnetcore == "Custom")
         {
-            args.Append($"--runtimeVersion \"{aspnetcore}\" ");
+            args.Append($"--aspNetCoreVersion \"{customAspNetCore}\" ");
+
+            if (runtime == "Custom")
+            {
+                args.Append($"--runtimeVersion \"{customRuntime}\" ");
+            }
+            else
+            {
+                args.Append($"--runtimeVersion \"{runtime}\" ");
+            }
         }
         else
         {
-            args.Append($"--runtimeVersion \"{runtime}\" ");
+            args.Append($"--aspNetCoreVersion \"{aspnetcore}\" ");
+
+            if (String.IsNullOrEmpty(runtime))
+            {
+                args.Append($"--runtimeVersion \"{aspnetcore}\" ");
+            }
+            else if (runtime == "Custom")
+            {
+                args.Append($"--runtimeVersion \"{customRuntime}\" ");
+            }
+            else
+            {
+                args.Append($"--runtimeVersion \"{runtime}\" ");
+            }
         }
 
         if (collect)
@@ -450,14 +541,14 @@
 
     async Task UploadOutputFile()
     {
-        var fileNameParts = await JsInterop.GetFileData(outputFile);
+        var fileNameParts = await JSRuntime.InvokeAsync<string>("getFileData", outputFile);
         var fileNameSegments = fileNameParts.Split(';');
         _outputFiles.Add(fileNameSegments[0], fileNameSegments[1]);
     }
 
     async Task UploadNugetPackage()
     {
-        var fileNameParts = await JsInterop.GetFileData(nugetPackage);
+        var fileNameParts = await JSRuntime.InvokeAsync<string>("getFileData", nugetPackage);
         var fileNameSegments = fileNameParts.Split(';');
         _nugetPackages.Add(fileNameSegments[0], fileNameSegments[1]);
     }

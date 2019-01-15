@@ -32,6 +32,10 @@
     });
 };
 
+function scrollToBottom(elem) {
+    elem.scrollTop = elem.scrollHeight;
+}
+
 $(function () {
     
 });
