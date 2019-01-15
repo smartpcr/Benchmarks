@@ -12,4 +12,4 @@ docker run \
     --network host \
     --restart always \
     benchmarks-ui \
-    --urls http://*:5001
+    --urls http://*:6001

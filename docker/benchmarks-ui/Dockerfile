@@ -22,4 +22,4 @@ FROM microsoft/dotnet:2.1-aspnetcore-runtime-stretch-slim AS runtime
 WORKDIR /app
 COPY --from=build-ui /app/out ./
 COPY --from=build-driver /app/out ./driver
-ENTRYPOINT ["dotnet", "Benchmarks.UI.Server.dll", "--driverPath", "./"]
+ENTRYPOINT ["dotnet", "Benchmarks.UI.Server.dll", "--driverPath", "./driver"]
