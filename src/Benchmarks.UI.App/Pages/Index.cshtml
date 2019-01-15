@@ -112,19 +112,6 @@
         }
     </div>
 
-
-    <div class="form-group col-md-6 col-lg-2">
-
-        @if (compare)
-        {
-            <select class="form-control" bind="@compareToJob">
-                @foreach (var savedJob in savedJobs)
-                {
-                    <option value="@savedJob.Key">@savedJob.Key</option>
-                }
-            </select>
-        }
-    </div>
 </div>
 
 <div class="row">
@@ -432,12 +419,12 @@
 
         args.Append($"--duration {duration} ");
 
-        if (extremes != "1")
+        if (extremes != "0")
         {
             args.Append($"-x {extremes} ").Append(" ");
         }
 
-        if (samples != "0")
+        if (samples != "1")
         {
             args.Append($"-i {samples} ");
         }
