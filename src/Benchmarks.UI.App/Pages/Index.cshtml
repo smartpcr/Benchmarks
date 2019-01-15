@@ -12,10 +12,10 @@
     <div class="form-group col-md-4 col-xl-2">
         <label>Server</label>
         <select class="form-control" bind="@currentServer">
-            <option value="--server http://10.195.201.248:5001 --client http://10.195.202.5:5002">Physical Windows</option>
-            <option value="--server http://10.195.202.140:5001 --client http://10.195.202.5:5002">Physical Linux</option>
-            <option value="--server http://172.16.228.80:5001 --client http://172.16.228.82:5002">Azure Windows</option>
-            <option value="--server http://172.16.228.83:5001 --client http://172.16.228.82:5002">Azure Linux</option>
+            @foreach (var serverDefinition in JobsService.GetServerDefinitions())
+            {
+                <option value="@serverDefinition.Arguments">@serverDefinition.DisplayName</option>
+            }
         </select>
         <span class="text-muted form-text small">The hardware to run the scenarios on.</span>
     </div>
@@ -121,7 +121,7 @@
     <div class="form-group col-md-4 col-xl-2">
         <label>Scenario</label>
         <select class="form-control" bind="@scenario">
-            @foreach (var jobDefinition in JobsService.GetJobDescriptions())
+            @foreach (var jobDefinition in JobsService.GetJobDefinitions())
             {
                 <option value="@jobDefinition.Arguments">@jobDefinition.DisplayName</option>
             }
@@ -282,8 +282,8 @@
 
     protected override async Task OnInitAsync()
     {
-        currentServer = "--server http://asp-perf-win:5001 --client http://asp-perf-load:5002";
-        scenario = JobsService.GetJobDescriptions().First().Arguments;
+        currentServer = JobsService.GetServerDefinitions().First().Arguments;
+        scenario = JobsService.GetJobDefinitions().First().Arguments;
         warmup = "15";
         duration = "15";
         samples = "1";
@@ -350,9 +350,12 @@
         await JSRuntime.InvokeAsync<string>("scrollToBottom", outputPre);
     }
 
-    Task StopJob()
+    async Task StopJob()
     {
-        return JobsService.StopProcess(processId);
+        standardOutput.AppendLine("STOPPING ...");
+        await JobsService.StopProcess(processId);
+        standardOutput.AppendLine("STOPPED !!!");
+
     }
 
     async Task Print()
@@ -559,5 +562,27 @@
         return await LocalStorage.GetItem<Dictionary<string, string>>("SavedJobs") ?? new Dictionary<string, string>();
     }
 
+    Task<object> SerializeCommand()
+    {
+        var command = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery("");
+
+        command["servers"] = currentServer;
+        command["scenario"] = scenario;
+        command["warmup"] = warmup;
+        command["duration"] = duration;
+        command["samples"] = samples;
+        command["extremes"] = extremes;
+        command["database"] = database;
+        command["host"] = host;
+        command["quiet"] = quiet.ToString();
+        command["markdown"] = markdown.ToString();
+        command["aspnetcore"] = aspnetcore;
+        command["runtime"] = runtime;
+
+        // We should be able to save files too, as they are in a temp folder of the server
+        // But it needs to be a folder outside of the Docker image
+
+        return Task.FromResult<object>(command);
+    }
 }
 

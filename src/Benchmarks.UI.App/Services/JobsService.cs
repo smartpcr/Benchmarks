@@ -75,6 +75,8 @@ namespace Benchmarks.UI.App.Services
 
                 } while (process != null && !process.HasExited);
             }
+
+            _processes.TryRemove(id, out process);
         }
 
         public string StartDriver(string arguments, StringBuilder output, Action outputDataReceived, Func<Task> onJobFinished)
@@ -120,7 +122,7 @@ namespace Benchmarks.UI.App.Services
             return id;
         }
 
-        public IEnumerable<JobDefinition> GetJobDescriptions()
+        public IEnumerable<JobDefinition> GetJobDefinitions()
         {
             // TODO: Instead of using the raw arguments we could assign all the properties to the local 
             // parameters so they could be tweaked
@@ -136,6 +138,20 @@ namespace Benchmarks.UI.App.Services
                 new JobDefinition("Json", $"-n Json {_jsonJobs}"),
                 new JobDefinition("Json Platform", $"-n Json {_jsonPlatformJobs}"),
                 new JobDefinition("Json MVC", $"-n MvcJson {_jsonJobs}"),
+            };
+        }
+
+        public IEnumerable<ServerDefinition> GetServerDefinitions()
+        {
+            // TODO: Instead of using the raw arguments we could assign all the properties to the local 
+            // parameters so they could be tweaked
+
+            return new ServerDefinition[]
+            {
+                new ServerDefinition("Physical Windows", "--server http://10.195.201.248:5001 --client http://10.195.202.5:5002"),
+                new ServerDefinition("Physical Linux", "--server http://10.195.202.140:5001 --client http://10.195.202.5:5002"),
+                new ServerDefinition("Cloud Windows", "--server http://172.16.228.80:5001 --client http://172.16.228.82:5002"),
+                new ServerDefinition("Cloud Windows", "--server http://172.16.228.83:5001 --client http://172.16.228.82:5002"),
             };
         }
 
