@@ -420,7 +420,7 @@
     async void OnStandardOutputChanged()
     {
         var now = DateTime.UtcNow;
-        //StateHasChanged();
+        StateHasChanged();
         await JSRuntime.InvokeAsync<string>("scrollToBottom", outputPre);
     }
 
