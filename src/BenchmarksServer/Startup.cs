@@ -574,7 +574,11 @@ namespace BenchmarkServer
                         {
                             Log.WriteLine($"Stopping job '{job.Id}' with scenario '{job.Scenario}'");
 
+                            Log.WriteLine($"### OUTPUT:" + standardOutput);
+
                             job.Output = standardOutput.ToString();
+
+                            Log.WriteLine($"### END OUTPUT:");
 
                             await StopJobAsync();
                         }
