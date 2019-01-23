@@ -651,6 +651,8 @@ namespace BenchmarkServer
                                     }
                                 }
 
+                                var workingDirectory = process.StartInfo.WorkingDirectory;
+
                                 if (!process.HasExited)
                                 {
                                     if (OperatingSystem == OperatingSystem.Linux)
@@ -721,7 +723,7 @@ namespace BenchmarkServer
                                 if (!String.IsNullOrEmpty(job.AfterScript))
                                 {
                                     var segments = job.AfterScript.Split(' ', 2);
-                                    var processResult = ProcessUtil.Run(segments[0], segments.Length > 1 ? segments[1] : "", log: true);
+                                    var processResult = ProcessUtil.Run(segments[0], segments.Length > 1 ? segments[1] : "", log: true, workingDirectory: workingDirectory);
                                     standardOutput.AppendLine(processResult.StandardOutput);
                                 }
 
