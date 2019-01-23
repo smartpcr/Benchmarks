@@ -407,7 +407,7 @@ namespace BenchmarkServer
 
                                 if (job.Source.DockerFile != null)
                                 {
-                                    (dockerContainerId, dockerImage) = await DockerBuildAndRun(tempDir, job, hostname);
+                                    (dockerContainerId, dockerImage) = await DockerBuildAndRun(tempDir, job, hostname, standardOutput);
                                 }
                                 else
                                 {
@@ -915,7 +915,7 @@ namespace BenchmarkServer
 
         }
 
-        private static async Task<(string containerId, string imageName)> DockerBuildAndRun(string path, ServerJob job, string hostname)
+        private static async Task<(string containerId, string imageName)> DockerBuildAndRun(string path, ServerJob job, string hostname, StringBuilder standardOutput)
         {
             var source = job.Source;
             // Docker image names must be lowercase
@@ -963,6 +963,8 @@ namespace BenchmarkServer
                     if (e != null && e.Data != null)
                     {
                         Log.WriteLine(e.Data);
+                        standardOutput.AppendLine(e.Data);
+                        Log.WriteLine($"Output: " + e.Data);
 
                         if (job.State == ServerState.Starting && e.Data.IndexOf(job.ReadyStateText, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
