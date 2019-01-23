@@ -1280,11 +1280,6 @@ namespace BenchmarksDriver
                                 await InvokeApplicationEndpoint(serverJobUri, shutdownEndpoint);
                             }
 
-                            if (_displayOutput)
-                            {
-                                Log(serverJob.Output, notime: true);
-                            }
-
                             // Load latest state of server job
                             LogVerbose($"GET {serverJobUri}...");
 
@@ -1662,6 +1657,11 @@ namespace BenchmarksDriver
                         }
 
                     } while (serverJob.State != ServerState.Stopped);
+
+                    if (_displayOutput)
+                    {
+                        Log(serverJob.Output, notime: true);
+                    }
 
                     // Download netperf file
                     if (enableEventPipe && serverJob.OperatingSystem == Benchmarks.ServerJob.OperatingSystem.Linux)

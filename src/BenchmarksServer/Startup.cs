@@ -475,12 +475,7 @@ namespace BenchmarkServer
                                                 }
                                                 else
                                                 {
-                                                    if (job.State != ServerState.Stopped && job.State != ServerState.Deleting)
-                                                    {
-                                                        job.Output = standardOutput.ToString();
-                                                        job.State = ServerState.Stopped;
-                                                        Log.WriteLine($"Process has stopped");
-                                                    }
+                                                    job.State = ServerState.Stopped;
                                                 }
                                             }
                                             else
@@ -580,6 +575,8 @@ namespace BenchmarkServer
                             Log.WriteLine($"Stopping job '{job.Id}' with scenario '{job.Scenario}'");
 
                             await StopJobAsync();
+
+                            job.Output = standardOutput.ToString();
                         }
                         else if (job.State == ServerState.Deleting)
                         {
