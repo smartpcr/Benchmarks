@@ -1629,6 +1629,10 @@ namespace BenchmarkServer
             var benchmarksDll = Path.Combine("published", $"{projectFilename}.dll");
             var iis = job.WebHost == WebHost.IISInProcess || job.WebHost == WebHost.IISOutOfProcess;
 
+            // Running BeforeScript
+            var result = ProcessUtil.Run("/usr/bin/env", $"bash " + job.BeforeScript, workingDirectory: workingDirectory);
+            standardOutput.AppendLine(result.StandardOutput);
+
             var commandLine = benchmarksDll ?? "";
 
             if (job.SelfContained)
