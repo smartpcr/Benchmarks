@@ -1765,7 +1765,7 @@ namespace BenchmarkServer
                 {
                     Log.WriteLine(e.Data);
                     standardOutput.AppendLine(e.Data);
-                    Log.WriteLine($"Output: " + e.Data);
+                    Log.WriteLine(standardOutput.Length.ToString());
 
                     if (job.State == ServerState.Starting &&
                         ((!String.IsNullOrEmpty(job.ReadyStateText) && e.Data.IndexOf(job.ReadyStateText, StringComparison.OrdinalIgnoreCase) >= 0) ||
