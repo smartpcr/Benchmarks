@@ -1660,7 +1660,6 @@ namespace BenchmarksDriver
 
                     if (_displayOutput)
                     {
-                        Log("## OUTPUT");
                         Log(serverJob.Output, notime: true);
                     }
 

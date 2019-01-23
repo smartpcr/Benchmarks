@@ -576,11 +576,7 @@ namespace BenchmarkServer
                         {
                             Log.WriteLine($"Stopping job '{job.Id}' with scenario '{job.Scenario}'");
 
-                            Log.WriteLine($"### OUTPUT:" + standardOutput);
-
                             job.Output = standardOutput.ToString();
-
-                            Log.WriteLine($"### END OUTPUT:");
 
                             await StopJobAsync();
                         }
@@ -966,7 +962,6 @@ namespace BenchmarkServer
                     {
                         Log.WriteLine(e.Data);
                         standardOutput.AppendLine(e.Data);
-                        Log.WriteLine($"Output: " + e.Data);
 
                         if (job.State == ServerState.Starting && e.Data.IndexOf(job.ReadyStateText, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
@@ -1767,7 +1762,6 @@ namespace BenchmarkServer
                 {
                     Log.WriteLine(e.Data);
                     standardOutput.AppendLine(e.Data);
-                    Log.WriteLine(standardOutput.Length.ToString());
 
                     if (job.State == ServerState.Starting &&
                         ((!String.IsNullOrEmpty(job.ReadyStateText) && e.Data.IndexOf(job.ReadyStateText, StringComparison.OrdinalIgnoreCase) >= 0) ||
