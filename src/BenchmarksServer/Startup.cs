@@ -574,9 +574,9 @@ namespace BenchmarkServer
                         {
                             Log.WriteLine($"Stopping job '{job.Id}' with scenario '{job.Scenario}'");
 
-                            await StopJobAsync();
-
                             job.Output = standardOutput.ToString();
+
+                            await StopJobAsync();
                         }
                         else if (job.State == ServerState.Deleting)
                         {
