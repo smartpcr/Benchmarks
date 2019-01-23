@@ -332,6 +332,10 @@ namespace BenchmarkServer
                 Timer timer = null;
                 var executionLock = new object();
                 var disposed = false;
+                var standardOutput = new StringBuilder();
+                string dotnetDir = dotnetHome;
+                string benchmarksDir = null;
+                var startMonitorTime = DateTime.UtcNow;
 
                 string tempDir = null;
                 string dockerImage = null;
@@ -367,11 +371,6 @@ namespace BenchmarkServer
 
                     if (job != null)
                     {
-                        string dotnetDir = dotnetHome;
-                        string benchmarksDir = null;
-                        var standardOutput = new StringBuilder();
-                        var startMonitorTime = DateTime.UtcNow;
-
                         if (job.State == ServerState.Failed)
                         {
                             var now = DateTime.UtcNow;
@@ -401,6 +400,9 @@ namespace BenchmarkServer
 
                                 Log.WriteLine($"Starting job '{job.Id}' with scenario '{job.Scenario}'");
                                 job.State = ServerState.Starting;
+
+                                standardOutput.Clear();
+                                startMonitorTime = DateTime.UtcNow;
 
                                 Debug.Assert(tempDir == null);
                                 tempDir = GetTempDir();
