@@ -1630,8 +1630,11 @@ namespace BenchmarkServer
             var iis = job.WebHost == WebHost.IISInProcess || job.WebHost == WebHost.IISOutOfProcess;
 
             // Running BeforeScript
-            var result = ProcessUtil.Run("/usr/bin/env", $"bash " + job.BeforeScript, workingDirectory: workingDirectory);
-            standardOutput.AppendLine(result.StandardOutput);
+            if (!String.IsNullOrEmpty(job.BeforeScript))
+            {
+                var result = ProcessUtil.Run("/usr/bin/env", $"bash " + job.BeforeScript, workingDirectory: workingDirectory, log: true);
+                standardOutput.AppendLine(result.StandardOutput);
+            }
 
             var commandLine = benchmarksDll ?? "";
 
