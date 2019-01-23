@@ -1632,7 +1632,8 @@ namespace BenchmarkServer
             // Running BeforeScript
             if (!String.IsNullOrEmpty(job.BeforeScript))
             {
-                var result = ProcessUtil.Run("/usr/bin/env", $"bash " + job.BeforeScript, workingDirectory: workingDirectory, log: true);
+                var segments = job.BeforeScript.Split(' ', 2);
+                var result = ProcessUtil.Run(segments[0], segments.Length > 1 ? segments[1] : "", workingDirectory: workingDirectory, log: true);
                 standardOutput.AppendLine(result.StandardOutput);
             }
 
