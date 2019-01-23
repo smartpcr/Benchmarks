@@ -576,8 +576,6 @@ namespace BenchmarkServer
                         {
                             Log.WriteLine($"Stopping job '{job.Id}' with scenario '{job.Scenario}'");
 
-                            job.Output = standardOutput.ToString();
-
                             await StopJobAsync();
                         }
                         else if (job.State == ServerState.Deleting)
@@ -714,9 +712,20 @@ namespace BenchmarkServer
 
                                     } while (process != null && !process.HasExited);
                                 }
+
                                 Log.WriteLine($"Process has stopped");
 
                                 process = null;
+
+                                // Running BeforeScript
+                                if (!String.IsNullOrEmpty(job.AfterScript))
+                                {
+                                    var segments = job.AfterScript.Split(' ', 2);
+                                    var processResult = ProcessUtil.Run(segments[0], segments.Length > 1 ? segments[1] : "", log: true);
+                                    standardOutput.AppendLine(processResult.StandardOutput);
+                                }
+
+                                job.Output = standardOutput.ToString();
                             }
                             else if (!String.IsNullOrEmpty(dockerImage))
                             {
@@ -920,6 +929,14 @@ namespace BenchmarkServer
             var imageName = $"benchmarks_{source.DockerImageName}".ToLowerInvariant();
             var cloneDir = Path.Combine(path, Git.Clone(path, source.Repository, shallow: true, branch: source.BranchOrCommit));
             var workingDirectory = Path.Combine(cloneDir, source.DockerContextDirectory);
+
+            // Running BeforeScript
+            if (!String.IsNullOrEmpty(job.BeforeScript))
+            {
+                var segments = job.BeforeScript.Split(' ', 2);
+                var processResult = ProcessUtil.Run(segments[0], segments.Length > 1 ? segments[1] : "", workingDirectory: workingDirectory, log: true);
+                standardOutput.AppendLine(processResult.StandardOutput);
+            }
 
             ProcessUtil.Run("docker", $"build --pull --no-cache -t {imageName} -f {source.DockerFile} {workingDirectory}", workingDirectory: cloneDir);
 

@@ -196,9 +196,9 @@ namespace BenchmarksDriver
             var sdkOption = app.Option("--sdk",
                 "SDK version to use", CommandOptionType.SingleValue);
             _initializeOption = app.Option("--initialize",
-                "A script to run before the application starts.", CommandOptionType.SingleValue);
+                "A script to run before the application starts, e.g. \"du\", \"/usr/bin/env bash dotnet-install.sh\"", CommandOptionType.SingleValue);
             _cleanOption = app.Option("--clean",
-                "A script to run after the application has stopped.", CommandOptionType.SingleValue);
+                "A script to run after the application has stopped, e.g. \"du\", \"/usr/bin/env bash dotnet-install.sh\"", CommandOptionType.SingleValue);
 
             // ClientJob Options
             var clientThreadsOption = app.Option("--clientThreads",
