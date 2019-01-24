@@ -514,48 +514,61 @@ namespace BenchmarkServer
                                         {
                                             var output = new StringBuilder();
 
-                                            // Get docker stats
-                                            var result = ProcessUtil.Run("docker", "container stats --no-stream --format \"{{.CPUPerc}}-{{.MemUsage}}\" " + dockerContainerId,
+                                            // Check the container is still running
+                                            ProcessUtil.Run("docker", "inspect -f {{.State.Running}} " + dockerContainerId,
                                                 outputDataReceived: d => output.AppendLine(d),
                                                 log: false);
 
-                                            var data = output.ToString().Trim().Split('-');
-
-                                            // Format is {value}%
-                                            var cpuPercentRaw = data[0];
-
-                                            // Format is {used}M/GiB/{total}M/GiB
-                                            var workingSetRaw = data[1];
-                                            var usedMemoryRaw = workingSetRaw.Split('/')[0].Trim();
-                                            var cpu = Math.Round(double.Parse(cpuPercentRaw.Trim('%')) / Environment.ProcessorCount);
-
-                                            // MiB, GiB, B ?
-                                            var factor = 1;
-                                            double memory;
-
-                                            if (usedMemoryRaw.EndsWith("GiB"))
+                                            if (output.ToString().Trim().Contains("false"))
                                             {
-                                                factor = 1024 * 1024 * 1024;
-                                                memory = double.Parse(usedMemoryRaw.Substring(0, usedMemoryRaw.Length - 3));
-                                            }
-                                            else if (usedMemoryRaw.EndsWith("MiB"))
-                                            {
-                                                factor = 1024 * 1024;
-                                                memory = double.Parse(usedMemoryRaw.Substring(0, usedMemoryRaw.Length - 3));
+                                                job.State = ServerState.Stopped;
                                             }
                                             else
                                             {
-                                                memory = double.Parse(usedMemoryRaw.Substring(0, usedMemoryRaw.Length - 1));
+                                                // Get docker stats
+                                                output.Clear();
+                                                var result = ProcessUtil.Run("docker", "container stats --no-stream --format \"{{.CPUPerc}}-{{.MemUsage}}\" " + dockerContainerId,
+                                                    outputDataReceived: d => output.AppendLine(d),
+                                                    log: false);
+
+                                                var data = output.ToString().Trim().Split('-');
+
+                                                // Format is {value}%
+                                                var cpuPercentRaw = data[0];
+
+                                                // Format is {used}M/GiB/{total}M/GiB
+                                                var workingSetRaw = data[1];
+                                                var usedMemoryRaw = workingSetRaw.Split('/')[0].Trim();
+                                                var cpu = Math.Round(double.Parse(cpuPercentRaw.Trim('%')) / Environment.ProcessorCount);
+
+                                                // MiB, GiB, B ?
+                                                var factor = 1;
+                                                double memory;
+
+                                                if (usedMemoryRaw.EndsWith("GiB"))
+                                                {
+                                                    factor = 1024 * 1024 * 1024;
+                                                    memory = double.Parse(usedMemoryRaw.Substring(0, usedMemoryRaw.Length - 3));
+                                                }
+                                                else if (usedMemoryRaw.EndsWith("MiB"))
+                                                {
+                                                    factor = 1024 * 1024;
+                                                    memory = double.Parse(usedMemoryRaw.Substring(0, usedMemoryRaw.Length - 3));
+                                                }
+                                                else
+                                                {
+                                                    memory = double.Parse(usedMemoryRaw.Substring(0, usedMemoryRaw.Length - 1));
+                                                }
+
+                                                var workingSet = (long)(memory * factor);
+
+                                                job.AddServerCounter(new ServerCounter
+                                                {
+                                                    Elapsed = now - startMonitorTime,
+                                                    WorkingSet = workingSet,
+                                                    CpuPercentage = cpu > 100 ? 0 : cpu
+                                                });
                                             }
-
-                                            var workingSet = (long)(memory * factor);
-
-                                            job.AddServerCounter(new ServerCounter
-                                            {
-                                                Elapsed = now - startMonitorTime,
-                                                WorkingSet = workingSet,
-                                                CpuPercentage = cpu > 100 ? 0 : cpu
-                                            });
                                         }
 
                                         // Resume once we finished processing all connections
