@@ -966,6 +966,8 @@ namespace BenchmarkServer
             var containerId = result.StandardOutput.Trim();
             job.Url = ComputeServerUrl(hostname, job);
 
+            var stopwatch = new Stopwatch();
+
             if (!String.IsNullOrEmpty(job.ReadyStateText))
             {
                 Log.WriteLine($"Waiting for startup signal: '{job.ReadyStateText}'...");
@@ -992,7 +994,7 @@ namespace BenchmarkServer
                         if (job.State == ServerState.Starting && e.Data.IndexOf(job.ReadyStateText, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             Log.WriteLine($"Application is now running...");
-                            job.State = ServerState.Running;
+                            MarkAsRunning(hostname, job, stopwatch);
                         }
                     }
                 };
@@ -1016,7 +1018,7 @@ namespace BenchmarkServer
                     Log.WriteLine($"Application MAY be running, continuing...");
                 }
 
-                job.State = ServerState.Running;
+                MarkAsRunning(hostname, job, stopwatch);
             }
 
             return (containerId, imageName, workingDirectory);
@@ -1801,7 +1803,7 @@ namespace BenchmarkServer
                         e.Data.ToLowerInvariant().Contains("started") ||
                         e.Data.ToLowerInvariant().Contains("listening")))
                     {
-                        MarkAsRunning(hostname, benchmarksRepo, job, stopwatch, process);
+                        MarkAsRunning(hostname, job, stopwatch);
                     }
                 }
             };
@@ -1870,14 +1872,13 @@ namespace BenchmarkServer
             if (iis)
             {
                 await WaitToListen(job, hostname);
-                MarkAsRunning(hostname, benchmarksRepo, job, stopwatch, process);
+                MarkAsRunning(hostname, job, stopwatch);
             }
 
             return process;
         }
 
-        private static void MarkAsRunning(string hostname, string benchmarksRepo, ServerJob job, Stopwatch stopwatch,
-            Process process)
+        private static void MarkAsRunning(string hostname, ServerJob job, Stopwatch stopwatch)
         {
             lock (job)
             {
