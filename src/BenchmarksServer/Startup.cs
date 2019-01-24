@@ -1063,13 +1063,13 @@ namespace BenchmarkServer
             return false;
         }
 
-        private static void DockerCleanUp(string containerId, string imageName)
+        private static void DockerCleanUp(string containerId, string imageName, ServerJob job)
         {
             var result = ProcessUtil.Run("docker", $"logs {containerId}", log: true);
 
             result = ProcessUtil.Run("docker", $"stop {containerId}", log: true);
 
-            result = ProcessUtil.Run("docker", $"rmi --force {imageName}", log: true);
+            result = ProcessUtil.Run("docker", $"rmi --force {imageName}" + (job.NoClean ? " --no-prune" : ""), log: true);
         }
 
         private static async Task<(string benchmarkDir, string dotnetDir)> CloneRestoreAndBuild(string path, ServerJob job, string dotnetHome)
