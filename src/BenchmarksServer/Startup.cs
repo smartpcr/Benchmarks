@@ -1102,10 +1102,11 @@ namespace BenchmarkServer
             result = ProcessUtil.Run("docker", $"logs {containerId}", log: true, outputDataReceived: d => output.AppendLine(d));
             var logs = output.ToString();
 
+            output.Clear();
             result = ProcessUtil.Run("docker", "inspect -f {{.State.Running}} " + containerId, outputDataReceived: d => output.AppendLine(d), log: true);
 
             // container is already stopped
-            if (output.ToString().Trim().Contains("false"))
+            if (output.ToString().Contains("false"))
             {
                 output.Clear();
                 ProcessUtil.Run("docker", "inspect -f {{.State.ExitCode}} " + containerId,
@@ -1123,9 +1124,11 @@ namespace BenchmarkServer
             }
             else
             {
+                output.Clear();
                 result = ProcessUtil.Run("docker", $"stop {containerId}", log: true);
             }
 
+            output.Clear();
             result = ProcessUtil.Run("docker", $"rmi --force {imageName}", log: true);
         }
 
