@@ -1099,7 +1099,7 @@ namespace BenchmarkServer
             var output = new StringBuilder();
             ProcessResult result;
 
-            result = ProcessUtil.Run("docker", $"logs {containerId}", log: true, outputDataReceived: d => output.AppendLine(d));
+            result = ProcessUtil.Run("docker", $"logs {containerId}", outputDataReceived: d => output.AppendLine(d), log: true);
             var logs = output.ToString();
 
             output.Clear();

@@ -61,12 +61,17 @@ namespace BenchmarkServer
                     if (outputDataReceived != null)
                     {
                         outputDataReceived.Invoke(e.Data);
+                        if (log)
+                        {
+                            Log.WriteLine(e.Data);
+                        }
                     }
                     else
                     {
                         outputBuilder.AppendLine(e.Data);
                         Log.WriteLine(e.Data);
                     }
+
                 };
 
                 var errorBuilder = new StringBuilder();
