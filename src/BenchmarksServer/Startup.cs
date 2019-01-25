@@ -418,7 +418,7 @@ namespace BenchmarkServer
                                     {
                                         var buildStart = DateTime.UtcNow;
                                         var cts = new CancellationTokenSource();
-                                        var buildAndRunTask = DockerBuildAndRun(tempDir, job, hostname, standardOutput, cancellationToken: cts.Token);
+                                        var buildAndRunTask = Task.Run(() => DockerBuildAndRun(tempDir, job, hostname, standardOutput, cancellationToken: cts.Token));
 
                                         while (true)
                                         {
