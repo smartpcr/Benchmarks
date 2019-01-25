@@ -83,7 +83,7 @@ namespace BenchmarkServer
         public static Hardware Hardware { get; private set; }
         public static string HardwareVersion { get; private set; }
         public static Dictionary<Database, string> ConnectionStrings = new Dictionary<Database, string>();
-        public static TimeSpan DriverTimeout = TimeSpan.FromSeconds(30);
+        public static TimeSpan DriverTimeout = TimeSpan.FromSeconds(10);
         public static TimeSpan BuildTimeout = TimeSpan.FromMinutes(30);
 
         static Startup()
@@ -451,7 +451,6 @@ namespace BenchmarkServer
                                                 break;
                                             }
 
-                                            Log.WriteLine($"-- building --");
                                             await Task.Delay(1000);
                                         }
                                     }
@@ -681,7 +680,7 @@ namespace BenchmarkServer
                         }
                         else if (job.State == ServerState.Starting)
                         {
-                            if (DateTime.UtcNow - startMonitorTime > TimeSpan.FromSeconds(30))
+                            if (DateTime.UtcNow - startMonitorTime > DriverTimeout)
                             {
                                 Log.WriteLine($"Job didn't start during the expected delay");
                                 job.State = ServerState.Stopping;
