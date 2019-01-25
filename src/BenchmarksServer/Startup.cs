@@ -535,19 +535,7 @@ namespace BenchmarkServer
 
                                             if (output.ToString().Trim().Contains("false"))
                                             {
-                                                output.Clear();
-                                                ProcessUtil.Run("docker", "inspect -f {{.State.ExitCode}} " + dockerContainerId,
-                                                outputDataReceived: d => output.AppendLine(d),
-                                                log: false);
-
-                                                if (output.ToString().Trim() == "false")
-                                                {
-                                                    job.State = ServerState.Stopped;
-                                                }
-                                                else
-                                                {
-                                                    job.State = ServerState.Failed;
-                                                }
+                                                job.State = ServerState.Stopping;
                                             }
                                             else
                                             {
@@ -1108,11 +1096,37 @@ namespace BenchmarkServer
 
         private static void DockerCleanUp(string containerId, string imageName, ServerJob job, StringBuilder standardOutput)
         {
-            var result = ProcessUtil.Run("docker", $"logs {containerId}", log: false, outputDataReceived: d => standardOutput.AppendLine(d));
+            var output = new StringBuilder();
+            ProcessResult result;
 
-            result = ProcessUtil.Run("docker", $"stop {containerId}", log: false);
+            result = ProcessUtil.Run("docker", $"logs {containerId}", log: false, outputDataReceived: d => output.AppendLine(d));
+            var logs = output.ToString();
 
-            result = ProcessUtil.Run("docker", $"rmi --force {imageName}" + (job.NoClean ? " --no-prune" : ""), log: true);
+            result = ProcessUtil.Run("docker", "inspect -f {{.State.Running}} " + containerId, outputDataReceived: d => output.AppendLine(d), log: false);
+
+            // container is already stopped
+            if (output.ToString().Trim().Contains("false"))
+            {
+                output.Clear();
+                ProcessUtil.Run("docker", "inspect -f {{.State.ExitCode}} " + containerId,
+                    outputDataReceived: d => output.AppendLine(d),
+                    log: false);
+
+                if (output.ToString().Trim() == "0")
+                {
+                    job.Error = logs;
+                }
+                else
+                {
+                    standardOutput.Append(logs);
+                }
+            }
+            else
+            {
+                result = ProcessUtil.Run("docker", $"stop {containerId}", log: false);
+            }
+
+            result = ProcessUtil.Run("docker", $"rmi --force {imageName}", log: false);
         }
 
         private static async Task<(string benchmarkDir, string dotnetDir)> CloneRestoreAndBuild(string path, ServerJob job, string dotnetHome)
