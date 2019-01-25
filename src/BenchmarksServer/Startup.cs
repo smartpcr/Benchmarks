@@ -1100,9 +1100,6 @@ namespace BenchmarkServer
             var output = new StringBuilder();
             ProcessResult result;
 
-            result = ProcessUtil.Run("docker", $"logs {containerId}", outputDataReceived: d => output.AppendLine(d), log: false);
-            var logs = output.ToString();
-
             output.Clear();
             result = ProcessUtil.Run("docker", "inspect -f {{.State.Running}} " + containerId, outputDataReceived: d => output.AppendLine(d), log: false);
 
@@ -1116,19 +1113,17 @@ namespace BenchmarkServer
 
                 if (output.ToString().Trim() != "0")
                 {
-                    job.Error = logs;
-                    Log.WriteLine("FAILED: " + logs);
+                    job.Error = standardOutput.ToString();
+                    Log.WriteLine("FAILED: " + job.Error);
                     job.State = ServerState.Failed;
                 }
                 else
                 {
-                    standardOutput.Append(logs);
                     job.State = ServerState.Stopped;
                 }
             }
             else
             {
-                output.Clear();
                 result = ProcessUtil.Run("docker", $"stop {containerId}", log: false);
 
                 job.State = ServerState.Stopped;
