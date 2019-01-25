@@ -535,7 +535,19 @@ namespace BenchmarkServer
 
                                             if (output.ToString().Trim().Contains("false"))
                                             {
-                                                job.State = ServerState.Stopped;
+                                                output.Clear();
+                                                ProcessUtil.Run("docker", "inspect -f {{.State.ExitCode}} " + dockerContainerId,
+                                                outputDataReceived: d => output.AppendLine(d),
+                                                log: false);
+
+                                                if (output.ToString().Trim() == "false")
+                                                {
+                                                    job.State = ServerState.Stopped;
+                                                }
+                                                else
+                                                {
+                                                    job.State = ServerState.Failed;
+                                                }
                                             }
                                             else
                                             {
@@ -1005,7 +1017,8 @@ namespace BenchmarkServer
             var command = useHostNetworking ? $"run -d {environmentArguments} {job.Arguments} --network host {imageName}" :
                                               $"run -d {environmentArguments} {job.Arguments} -p {job.Port}:{job.Port} {imageName}";
 
-            var result = ProcessUtil.Run("docker", $"{command} ");
+            var result = ProcessUtil.Run("docker", $"{command} ", throwOnError: false);
+
             var containerId = result.StandardOutput.Trim();
             job.Url = ComputeServerUrl(hostname, job);
 
