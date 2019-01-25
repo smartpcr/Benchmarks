@@ -1117,6 +1117,7 @@ namespace BenchmarkServer
                 if (output.ToString().Trim() != "0")
                 {
                     job.Error = logs;
+                    Log.WriteLine("FAILED: " + logs);
                     job.State = ServerState.Failed;
                 }
                 else
