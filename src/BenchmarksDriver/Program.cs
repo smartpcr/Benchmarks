@@ -1130,7 +1130,7 @@ namespace BenchmarksDriver
                         {
                             Log($"Job failed on benchmark server, stopping...");
 
-                            Console.WriteLine(serverJob.Error);
+                            Log(serverJob.Error, notime: true);
 
                             // Returning will also send a Delete message to the server
                             return -1;
