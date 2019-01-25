@@ -408,6 +408,7 @@ namespace BenchmarkServer
                                 Debug.Assert(tempDir == null);
                                 tempDir = GetTempDir();
                                 workingDirectory = null;
+                                dockerImage = null;
 
                                 if (job.Source.DockerFile != null)
                                 {
@@ -610,7 +611,7 @@ namespace BenchmarkServer
 
                             await StopJobAsync();
                         }
-                        else if (job.State == ServerState.Stopped)
+                        else if (job.State == ServerState.Stopped || job.State == ServerState.Failed)
                         {
                             Log.WriteLine($"Job '{job.Id}' is stopped, waiting for the driver to delete it");
                         }
@@ -758,7 +759,6 @@ namespace BenchmarkServer
                             else if (!String.IsNullOrEmpty(dockerImage))
                             {
                                 DockerCleanUp(dockerContainerId, dockerImage, job, standardOutput);
-                                dockerImage = null;
                             }
 
                             // Running AfterScript
@@ -771,7 +771,7 @@ namespace BenchmarkServer
 
                             job.Output = standardOutput.ToString();
                             
-                            Log.WriteLine($"Process stopped");
+                            Log.WriteLine($"Process stopped ({job.State})");
                         }
 
                         async Task DeleteJobAsync()
