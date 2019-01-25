@@ -431,10 +431,10 @@ namespace BenchmarkServer
                                             // Cancel the build if the driver timed out
                                             if (DateTime.UtcNow - job.LastDriverCommunicationUtc > DriverTimeout)
                                             {
+                                                Log.WriteLine($"Driver didn't communicate for {DriverTimeout}. Halting build.");
                                                 cts.Cancel();
                                                 await buildAndRunTask;
 
-                                                Log.WriteLine($"Driver didn't communicate for {DriverTimeout}. Halting build.");
                                                 job.State = ServerState.Failed;
                                                 break;
                                             }
@@ -442,10 +442,10 @@ namespace BenchmarkServer
                                             // Cancel the build if it's taking too long
                                             if (DateTime.UtcNow - buildStart > BuildTimeout)
                                             {
+                                                Log.WriteLine($"Build is taking too long. Halting build.");
                                                 cts.Cancel();
                                                 await buildAndRunTask;
 
-                                                Log.WriteLine($"Build is taking too long. Halting build.");
                                                 job.Error = "Build is taking too long. Halting build.";
                                                 job.State = ServerState.Failed;
                                                 break;
@@ -1028,7 +1028,7 @@ namespace BenchmarkServer
                 standardOutput.AppendLine(processResult.StandardOutput);
             }
 
-            ProcessUtil.Run("docker", $"build --pull -t {imageName} -f {source.DockerFile} {workingDirectory}", workingDirectory: srcDir, timeout: BuildTimeout, cancellationToken: cancellationToken);
+            ProcessUtil.Run("docker", $"build --pull -t {imageName} -f {source.DockerFile} {workingDirectory}", workingDirectory: srcDir, timeout: BuildTimeout, cancellationToken: cancellationToken, log: true);
 
             if (cancellationToken.IsCancellationRequested)
             {
