@@ -751,6 +751,8 @@ namespace BenchmarkServer
 
                                 Log.WriteLine($"Process has stopped");
 
+                                job.State = ServerState.Stopped;
+
                                 process = null;
                             }
                             else if (!String.IsNullOrEmpty(dockerImage))
@@ -768,8 +770,7 @@ namespace BenchmarkServer
                             }
 
                             job.Output = standardOutput.ToString();
-
-                            job.State = ServerState.Stopped;
+                            
                             Log.WriteLine($"Process stopped");
                         }
 
@@ -1099,11 +1100,11 @@ namespace BenchmarkServer
             var output = new StringBuilder();
             ProcessResult result;
 
-            result = ProcessUtil.Run("docker", $"logs {containerId}", outputDataReceived: d => output.AppendLine(d), log: true);
+            result = ProcessUtil.Run("docker", $"logs {containerId}", outputDataReceived: d => output.AppendLine(d), log: false);
             var logs = output.ToString();
 
             output.Clear();
-            result = ProcessUtil.Run("docker", "inspect -f {{.State.Running}} " + containerId, outputDataReceived: d => output.AppendLine(d), log: true);
+            result = ProcessUtil.Run("docker", "inspect -f {{.State.Running}} " + containerId, outputDataReceived: d => output.AppendLine(d), log: false);
 
             // container is already stopped
             if (output.ToString().Contains("false"))
@@ -1111,25 +1112,29 @@ namespace BenchmarkServer
                 output.Clear();
                 ProcessUtil.Run("docker", "inspect -f {{.State.ExitCode}} " + containerId,
                     outputDataReceived: d => output.AppendLine(d),
-                    log: true);
+                    log: false);
 
-                if (output.ToString().Trim() == "0")
+                if (output.ToString().Trim() != "0")
                 {
                     job.Error = logs;
+                    job.State = ServerState.Failed;
                 }
                 else
                 {
                     standardOutput.Append(logs);
+                    job.State = ServerState.Stopped;
                 }
             }
             else
             {
                 output.Clear();
-                result = ProcessUtil.Run("docker", $"stop {containerId}", log: true);
+                result = ProcessUtil.Run("docker", $"stop {containerId}", log: false);
+
+                job.State = ServerState.Stopped;
             }
 
             output.Clear();
-            result = ProcessUtil.Run("docker", $"rmi --force {imageName}", log: true);
+            result = ProcessUtil.Run("docker", $"rmi --force {imageName}", log: false);
         }
 
         private static async Task<(string benchmarkDir, string dotnetDir)> CloneRestoreAndBuild(string path, ServerJob job, string dotnetHome)
