@@ -1102,10 +1102,10 @@ namespace BenchmarkServer
             // container is already stopped
             if (state.Contains("false"))
             {
-                if (ProcessUtil.Run("docker", "inspect -f {{.State.ExitCode}} " + containerId).StandardOutput != "0")
+                if (ProcessUtil.Run("docker", "inspect -f {{.State.ExitCode}} " + containerId).StandardOutput.Trim() != "0")
                 {
+                    Log.WriteLine("Job failed");
                     job.Error = ProcessUtil.Run("docker", "logs " + containerId).StandardError;
-                    Log.WriteLine("FAILED: " + job.Error);
                     job.State = ServerState.Failed;
                 }
                 else

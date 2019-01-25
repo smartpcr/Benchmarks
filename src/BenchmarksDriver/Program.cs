@@ -1130,7 +1130,7 @@ namespace BenchmarksDriver
                         {
                             Log($"Job failed on benchmark server, stopping...");
 
-                            Log(serverJob.Error, notime: true);
+                            Log(serverJob.Error, notime: true, error: true);
 
                             // Returning will also send a Delete message to the server
                             return -1;
@@ -2144,8 +2144,13 @@ namespace BenchmarksDriver
               Console.WriteLine(message);
         }
 
-        private static void Log(string message, bool notime = false)
+        private static void Log(string message, bool notime = false, bool error = false)
         {
+            if (error)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+            }
+
             if (!_quiet)
             {
                 var time = DateTime.Now.ToString("hh:mm:ss.fff");
@@ -2158,6 +2163,8 @@ namespace BenchmarksDriver
                     Console.WriteLine($"[{time}] {message}");
                 }
             }
+
+            Console.ResetColor();
         }
 
         private static void LogVerbose(string message)
