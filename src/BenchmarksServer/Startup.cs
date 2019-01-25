@@ -450,6 +450,9 @@ namespace BenchmarkServer
                                                 job.State = ServerState.Failed;
                                                 break;
                                             }
+
+                                            Log.WriteLine($"-- building --");
+                                            await Task.Delay(1000);
                                         }
                                     }
                                     catch(Exception e)
