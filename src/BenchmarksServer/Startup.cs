@@ -1113,9 +1113,10 @@ namespace BenchmarkServer
 
                 if (output.ToString().Trim() != "0")
                 {
+                    Log.WriteLine("LOGS: ");
 
                     output.Clear();
-                    result = ProcessUtil.Run("docker", "logs " + containerId, outputDataReceived: d => output.AppendLine(d), log: false);
+                    result = ProcessUtil.Run("docker", "logs " + containerId, outputDataReceived: d => output.AppendLine(d), log: true);
 
                     job.Error = output.ToString();
                     Log.WriteLine("FAILED: " + job.Error);
