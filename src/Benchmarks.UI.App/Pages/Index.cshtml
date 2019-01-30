@@ -367,6 +367,7 @@
         }
 
         savedJobs = await GetSavedJobs();
+        compareToJob = savedJobs.FirstOrDefault().Key;
         savedCommands = await GetSavedCommands();
     }
 
