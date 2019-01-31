@@ -1352,7 +1352,8 @@ namespace BenchmarkServer
                         dotnetInstallStep = $"SDK version '{sdkVersion}'";
 
                         // Install latest SDK version (and associated runtime)
-                        ProcessUtil.RetryOnException(3, () => ProcessUtil.Run("powershell", $"-NoProfile -ExecutionPolicy unrestricted .\\dotnet-install.ps1 -Version {sdkVersion} -NoPath -SkipNonVersionedFiles -InstallDir {dotnetHome}",
+                        ProcessUtil.RetryOnException(3, () => ProcessUtil.Run("powershell", $"-NoProfile -ExecutionPolicy unrestricted .\\dotnet-install.ps1 -Version {sdkVersion} -NoPath -SkipNonVersionedFiles -InstallDir {dotnetHome}", 
+                        log:true,
                         workingDirectory: _dotnetInstallPath,
                         environmentVariables: env));
 
@@ -1365,6 +1366,7 @@ namespace BenchmarkServer
 
                         // Install runtime required for this scenario
                         ProcessUtil.RetryOnException(3, () => ProcessUtil.Run("powershell", $"-NoProfile -ExecutionPolicy unrestricted .\\dotnet-install.ps1 -Version {runtimeVersion} -Runtime dotnet -NoPath -SkipNonVersionedFiles -InstallDir {dotnetHome}",
+                        log: true, 
                         workingDirectory: _dotnetInstallPath,
                         environmentVariables: env));
 
@@ -1378,6 +1380,7 @@ namespace BenchmarkServer
 
                         // Install aspnet runtime required for this scenario
                         ProcessUtil.RetryOnException(3, () => ProcessUtil.Run("powershell", $"-NoProfile -ExecutionPolicy unrestricted .\\dotnet-install.ps1 -Version {aspNetCoreVersion} -Runtime aspnetcore -NoPath -SkipNonVersionedFiles -InstallDir {dotnetHome}",
+                        log: true,
                         workingDirectory: _dotnetInstallPath,
                         environmentVariables: env));
 
@@ -1392,6 +1395,7 @@ namespace BenchmarkServer
                         
                         // Install latest SDK version (and associated runtime)
                         ProcessUtil.RetryOnException(3, () => ProcessUtil.Run("/usr/bin/env", $"bash dotnet-install.sh --version {sdkVersion} --no-path --skip-non-versioned-files --install-dir {dotnetHome}",
+                        log: true,
                         workingDirectory: _dotnetInstallPath,
                         environmentVariables: env));
                         _installedSdks.Add(sdkVersion);
@@ -1403,6 +1407,7 @@ namespace BenchmarkServer
 
                         // Install required runtime 
                         ProcessUtil.RetryOnException(3, () => ProcessUtil.Run("/usr/bin/env", $"bash dotnet-install.sh --version {runtimeVersion} --runtime dotnet --no-path --skip-non-versioned-files --install-dir {dotnetHome}",
+                        log: true,
                         workingDirectory: _dotnetInstallPath,
                         environmentVariables: env));
 
@@ -1416,6 +1421,7 @@ namespace BenchmarkServer
 
                         // Install required runtime 
                         ProcessUtil.RetryOnException(3, () => ProcessUtil.Run("/usr/bin/env", $"bash dotnet-install.sh --version {aspNetCoreVersion} --runtime aspnetcore --no-path --skip-non-versioned-files --install-dir {dotnetHome}",
+                        log: true,
                         workingDirectory: _dotnetInstallPath,
                         environmentVariables: env));
 
