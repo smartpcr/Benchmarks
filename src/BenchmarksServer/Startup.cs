@@ -670,7 +670,7 @@ namespace BenchmarkServer
                             {
                                 if (OperatingSystem == OperatingSystem.Windows)
                                 {
-                                    RunPerfview("stop /AcceptEula /NoNGenRundown /NoView", benchmarksDir);
+                                    RunPerfview("stop /AcceptEula /NoNGenRundown /NoView", Path.Combine(tempDir, benchmarksDir));
                                 }
                                 else if (OperatingSystem == OperatingSystem.Linux)
                                 {
@@ -855,7 +855,7 @@ namespace BenchmarkServer
                 return null;
             }
 
-            Log.WriteLine($"Starting process '{_perfviewPath} {arguments}'");
+            Log.WriteLine($"Starting process '{_perfviewPath} {arguments}' in '{workingDirectory}'");
 
             var process = new Process()
             {
