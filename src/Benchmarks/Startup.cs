@@ -330,9 +330,9 @@ namespace Benchmarks
                 app.UseResponseCachingPlaintextVaryByCached();
             }
 
-            app.UseAutoShutdown();
+            //app.UseAutoShutdown();
 
-            app.RunDebugInfoPage();
+            //app.RunDebugInfoPage();
         }
     }
 }
