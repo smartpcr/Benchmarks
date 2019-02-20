@@ -6,7 +6,7 @@
     <RuntimeFrameworkVersion>$(MicrosoftNETCoreAppPackageVersion)</RuntimeFrameworkVersion>
     <!-- Prevent the SDK from validating the supported TFM. -->
     <NETCoreAppMaximumVersion>99.9</NETCoreAppMaximumVersion>
-    <DisabledWarnings>0618</DisabledWarnings>
+    <NoWarn>0618</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
