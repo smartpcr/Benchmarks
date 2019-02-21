@@ -207,15 +207,15 @@ namespace BenchmarksClient.Workers
 
                 job.Latency.Average = result.latency.mean;
 
-                job.Latency.Within50thPercentile = result.rps.percentiles["50"];
+                job.Latency.Within50thPercentile = result.latency.percentiles["50"];
 
-                job.Latency.Within75thPercentile = result.rps.percentiles["75"];
+                job.Latency.Within75thPercentile = result.latency.percentiles["75"];
 
-                job.Latency.Within90thPercentile = result.rps.percentiles["90"];
+                job.Latency.Within90thPercentile = result.latency.percentiles["90"];
 
-                job.Latency.Within99thPercentile = result.rps.percentiles["99"];
+                job.Latency.Within99thPercentile = result.latency.percentiles["99"];
 
-                job.Latency.MaxLatency = result.rps.max;
+                job.Latency.MaxLatency = result.latency.max;
 
                 job.SocketErrors = 0;
 
