@@ -71,6 +71,10 @@ RUN cd /tmp \
     && cp docker/docker /usr/bin \
     && rm -rf docker.tgz docker
 
+# Install bombardier
+RUN cd /usr/local/bin \
+    && wget https://github.com/codesenberg/bombardier/releases/download/v1.2.3/bombardier-linux-amd64 -O bombardier \
+
 WORKDIR /benchmarks
 
 ENV DOTNET_SKIP_FIRST_TIME_EXPERIENCE true
