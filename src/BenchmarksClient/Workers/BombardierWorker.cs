@@ -142,8 +142,6 @@ namespace BenchmarksClient.Workers
                 command += $" -d {job.Duration}s";
             }
 
-            command += $" {job.ServerBenchmarkUri}{job.Query}";
-
             if (job.Method != "GET")
             {
                 command += $" -m {job.Method}";
@@ -153,6 +151,8 @@ namespace BenchmarksClient.Workers
             {
                 command += $" -r {r}";
             }
+
+            command += $" {job.ServerBenchmarkUri}{job.Query}";
 
             Log(command);
 
