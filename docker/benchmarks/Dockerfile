@@ -73,7 +73,7 @@ RUN cd /tmp \
 
 # Install bombardier
 RUN cd /usr/local/bin \
-    && wget https://github.com/codesenberg/bombardier/releases/download/v1.2.3/bombardier-linux-amd64 -O bombardier \
+    && wget https://github.com/codesenberg/bombardier/releases/download/v1.2.3/bombardier-linux-amd64 -O bombardier
 
 WORKDIR /benchmarks
 
