@@ -214,7 +214,7 @@ namespace BenchmarksClient.Workers
 
                 job.Requests = result.req1xx + result.req2xx + result.req3xx + result.req4xx + result.req5xx;
 
-                job.ActualDuration = TimeSpan.FromSeconds(result.timeTakenSeconds);
+                job.ActualDuration = TimeSpan.FromSeconds((double)result.timeTakenSeconds);
 
                 job.State = ClientState.Completed;
             };
