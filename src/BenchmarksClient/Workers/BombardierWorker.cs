@@ -152,6 +152,15 @@ namespace BenchmarksClient.Workers
                 command += $" -r {r}";
             }
 
+            if (job.ClientProperties.TryGetValue("protocol", out var protocol))
+            {
+                switch (protocol)
+                {
+                    case "h2": command += " --http2"; break;
+                    case "h2c": command += " --http2"; break;
+                }
+            }
+
             command += $" {job.ServerBenchmarkUri}{job.Query}";
 
             Log(command);
