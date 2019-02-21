@@ -191,7 +191,8 @@ namespace BenchmarksClient.Workers
                 // Wait for all Output messages to be flushed and available in job.Output
                 Thread.Sleep(100);
 
-                dynamic result = JObject.Parse(job.Output);
+                dynamic output = JObject.Parse(job.Output);
+                var result = output.result;
 
                 job.RequestsPerSecond = result.rps.max; // Using max instead of mean will get us more stable results
 
