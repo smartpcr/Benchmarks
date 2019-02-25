@@ -63,20 +63,13 @@
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
 
-    <!-- Using latest specified version -->
-    <!--<PackageReference Condition="$(MicrosoftAspNetCoreAppPackageVersion) != ''" Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
-    <PackageReference Condition="$(MicrosoftAspNetCoreAppPackageVersion) != ''" Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />-->
-
-    <!-- This is not necessary when targetting Microsoft.NET.Sdk.Web on 3.x-->
-    <!--<FrameworkReference Include="Microsoft.AspNetCore.App" />-->
-
     <PackageReference Include="Microsoft.AspNetCore.Server.IntegrationTesting.IIS" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
 
-    <FrameworkReference Include="Microsoft.AspNetCore.App" 
+    <FrameworkReference Update="Microsoft.AspNetCore.App" 
                         RuntimeFrameworkVersion="$(MicrosoftAspNetCoreAppPackageVersion)" 
                         />
 
-    <FrameworkReference Include="Microsoft.NETCore.App"
+    <FrameworkReference Update="Microsoft.NETCore.App"
                         RuntimeFrameworkVersion="$(MicrosoftNETCoreAppPackageVersion)"
                         />
 
