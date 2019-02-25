@@ -64,8 +64,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
 
     <!-- Using latest specified version -->
-    <PackageReference Condition="$(MicrosoftAspNetCoreAppPackageVersion) != ''" Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
-    <PackageReference Condition="$(MicrosoftAspNetCoreAppPackageVersion) != ''" Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
+    <!--<PackageReference Condition="$(MicrosoftAspNetCoreAppPackageVersion) != ''" Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
+    <PackageReference Condition="$(MicrosoftAspNetCoreAppPackageVersion) != ''" Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />-->
 
     <!-- This is not necessary when targetting Microsoft.NET.Sdk.Web on 3.x-->
     <!--<FrameworkReference Include="Microsoft.AspNetCore.App" />-->
