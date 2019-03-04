@@ -9,6 +9,7 @@ using Benchmarks.Configuration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -31,7 +32,11 @@ namespace Benchmarks.Middleware
             {
                 httpContext.Response.StatusCode = 200;
 
-                var applicationLifeTime = httpContext.RequestServices.GetService<IApplicationLifetime>();
+#if NETCOREAPP3_0
+                var applicationLifeTime = httpContext.RequestServices.GetService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+#else
+                var applicationLifeTime = httpContext.RequestServices.GetService<Microsoft.AspNetCore.Hosting.IApplicationLifetime>();
+#endif
                 applicationLifeTime.StopApplication();
 
                 return;

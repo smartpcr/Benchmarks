@@ -18,6 +18,12 @@ using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Npgsql;
 
+#if NETCOREAPP3_0
+using IHostingEnvironment = Microsoft.Extensions.Hosting.IHostEnvironment;
+#else
+using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
+#endif
+
 namespace Benchmarks
 {
     public class Startup

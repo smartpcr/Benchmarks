@@ -14,6 +14,12 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 
+#if NETCOREAPP3_0
+using IHostingEnvironment = Microsoft.Extensions.Hosting.IHostEnvironment;
+#else
+using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
+#endif
+
 namespace Benchmarks.Middleware
 {
     public class DebugInfoPageMiddleware
