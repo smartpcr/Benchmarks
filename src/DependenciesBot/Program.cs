@@ -90,10 +90,10 @@ namespace DependenciesBot
         };
 
         static readonly string _extensionsPackageId = "Microsoft.Extensions.Caching.Memory";
-        static readonly string _extensionsVersionPrefix = "3.0.0-preview.";
+        static readonly string _extensionsVersionPrefix = "3.0.0-preview4.";
 
         static readonly string _efCorePackageId = "Microsoft.EntityFrameworkCore.Abstractions";
-        static readonly string _efCoreVersionPrefix = "3.0.0-preview.";
+        static readonly string _efCoreVersionPrefix = "3.0.0-preview4.";
 
         // The packages to update in aspnet/EntityFrameworkCore
         static readonly HashSet<string> _efCorePackageNames = new HashSet<string>()
@@ -119,9 +119,9 @@ namespace DependenciesBot
         static readonly string _aspnetCoreDependenciesFilename = "aspnetcore-dependencies.props";
 
         // core-setup/corefx
-        static readonly string _latestCoreSetupPackages = "https://raw.githubusercontent.com/dotnet/versions/f1dc6b435d9258ed88da71336c7ed2cff3a5ac9f/build-info/dotnet/core-setup/master/Latest_Packages.txt"; // "https://raw.githubusercontent.com/dotnet/versions/master/build-info/dotnet/core-setup/master/Latest_Packages.txt";
-        static readonly string _latestCoreFxPackages = "https://raw.githubusercontent.com/dotnet/versions/f1dc6b435d9258ed88da71336c7ed2cff3a5ac9f/build-info/dotnet/corefx/master/Latest_Packages.txt"; // "https://raw.githubusercontent.com/dotnet/versions/master/build-info/dotnet/corefx/master/Latest_Packages.txt";
-        static readonly string _coreSetupCoherence = "https://raw.githubusercontent.com/dotnet/core-setup/c6c782a98cb7c61746a08a9574ee5b2c3b77894e/dependencies.props"; // "https://raw.githubusercontent.com/dotnet/core-setup/master/dependencies.props";
+        static readonly string _latestCoreSetupPackages = "https://raw.githubusercontent.com/dotnet/versions/master/build-info/dotnet/core-setup/master/Latest_Packages.txt";
+        static readonly string _latestCoreFxPackages = "https://raw.githubusercontent.com/dotnet/versions/master/build-info/dotnet/corefx/master/Latest_Packages.txt";
+        static readonly string _coreSetupCoherence = "https://raw.githubusercontent.com/dotnet/core-setup/master/eng/Versions.props";
 
         static readonly string _coreSetupCoherenceFilename = "core-setup-dependencies.props";
         static readonly string _latestCoreSetupPackagesFilename = "core-setup-latest.txt";
@@ -164,6 +164,14 @@ namespace DependenciesBot
 
             if (action == "coherence")
             {
+                await EnsureCoherence();
+
+                return;
+            }
+
+            if (action == "clean-coherence")
+            {
+                Clean();
                 await EnsureCoherence();
 
                 return;
@@ -247,9 +255,11 @@ namespace DependenciesBot
             var expectedCoreSetupVersion = new Regex($@"\<MicrosoftNETCoreRuntimeCoreCLRPackageVersion\>([\w\-\.]+)\</MicrosoftNETCoreRuntimeCoreCLRPackageVersion\>").Match(coreSetupCoherence).Groups[1].Value;
             var expectedCoreFxVersion = new Regex($@"\<MicrosoftNETCorePlatformsPackageVersion\>([\w\-\.]+)\</MicrosoftNETCorePlatformsPackageVersion\>").Match(coreSetupCoherence).Groups[1].Value;
 
+            // Versions as they are currently defined in the core-setup repository
             var latestCoreSetup = await File.ReadAllTextAsync(_latestCoreSetupPackagesFilename);
             var latestCoreFx = await File.ReadAllTextAsync(_latestCoreFxPackagesFilename);
 
+            // Versions which are currently available in the feeds
             var latestCoreSetupVersion = new Regex(@"^Microsoft\.NETCore\.App\s+([\w\-\.]+)\s*$", RegexOptions.Multiline).Match(latestCoreSetup).Groups[1].Value;
             var latestCoreFxVersion = new Regex(@"^Microsoft\.NETCore\.Platforms\s+([\w\-\.]+)\s*$", RegexOptions.Multiline).Match(latestCoreFx).Groups[1].Value;
 
@@ -264,10 +274,12 @@ namespace DependenciesBot
             }
             else
             {
+                Log($"FAILED");
+                Log($"The current core-setup build might not be finalized");
+
+                Log($"Mismatched versions (Versions.props / latest produced package)");
                 Log($"Core-Setup: {expectedCoreSetupVersion} / {latestCoreSetupVersion}");
                 Log($"CoreFx: {expectedCoreFxVersion} / {latestCoreFxVersion}");
-
-                Log($"FAILED");
 
                 return false;
             }
