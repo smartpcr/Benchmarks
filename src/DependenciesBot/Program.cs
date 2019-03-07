@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Octokit;
 
@@ -89,6 +91,8 @@ namespace DependenciesBot
             "MicrosoftExtensionsWebEncodersSourcesPackageVersion",
         };
 
+        static readonly string _netCoreUrlPrefix = "https://dotnetcli.azureedge.net/dotnet/Runtime/{0}/dotnet-runtime-{0}-win-x64.zip";
+
         static readonly string _extensionsPackageId = "Microsoft.Extensions.Caching.Memory";
         static readonly string _extensionsVersionPrefix = "3.0.0-preview4.";
 
@@ -110,12 +114,20 @@ namespace DependenciesBot
         };
 
         // extensions/efcore/aspnetcore
-        static readonly string _extensionsDependencies = "https://raw.githubusercontent.com/aspnet/Extensions/master/eng/Dependencies.props";
-        static readonly string _efCoreDependencies = "https://raw.githubusercontent.com/aspnet/EntityFrameworkCore/master/build/dependencies.props";
-        static readonly string _aspnetCoreDependencies = "https://raw.githubusercontent.com/aspnet/AspNetCore/master/build/dependencies.props";
+        static readonly string _extensionsVersions = "https://raw.githubusercontent.com/aspnet/Extensions/master/eng/Versions.props";
+        static readonly string _extensionsDetails = "https://raw.githubusercontent.com/aspnet/Extensions/master/eng/Version.Details.xml";
 
-        static readonly string _extensionsDependenciesFilename = "extensions-dependencies.props";
-        static readonly string _efcoreDependenciesFilename = "efcore-dependencies.props";
+        static readonly string _efCoreVersions = "https://raw.githubusercontent.com/aspnet/EntityFrameworkCore/master/eng/Versions.props";
+        static readonly string _efCoreDetails = "https://raw.githubusercontent.com/aspnet/EntityFrameworkCore/master/eng/Version.Details.xml";
+
+        static readonly string _aspnetCoreDependencies = "https://github.com/aspnet/AspNetCore/blob/master/eng/Versions.props";
+
+        static readonly string _extensionsVersionsFilename = "extensions-Versions.props";
+        static readonly string _extensionsDetailsFilename = "extensions-Versions.Details.xml";
+
+        static readonly string _efcoreVersionsFilename = "efcore-Versions.props";
+        static readonly string _efcoreDetailsFilename = "efcore-Versions.Details.xml";
+
         static readonly string _aspnetCoreDependenciesFilename = "aspnetcore-dependencies.props";
 
         // core-setup/corefx
@@ -126,6 +138,7 @@ namespace DependenciesBot
         static readonly string _coreSetupCoherenceFilename = "core-setup-dependencies.props";
         static readonly string _latestCoreSetupPackagesFilename = "core-setup-latest.txt";
         static readonly string _latestCoreFxPackagesFilename = "corefx-latest.txt";
+        static readonly string _versionsFilename = "versions.txt";
 
         static readonly HashSet<string> _ignorePackages = new HashSet<string> ()
         {
@@ -206,8 +219,10 @@ namespace DependenciesBot
             File.Delete(_coreSetupCoherenceFilename);
             File.Delete(_latestCoreSetupPackagesFilename);
             File.Delete(_latestCoreFxPackagesFilename);
-            File.Delete(_extensionsDependenciesFilename);
-            File.Delete(_efcoreDependenciesFilename);
+            File.Delete(_extensionsVersionsFilename);
+            File.Delete(_extensionsDetailsFilename);
+            File.Delete(_efcoreVersionsFilename);
+            File.Delete(_efcoreDetailsFilename);
         }
 
         private static async Task<bool> EnsureCoherence()
@@ -218,20 +233,15 @@ namespace DependenciesBot
             // In  for 
             // MicrosoftNETCoreRuntimeCoreCLRPackageVersion and MicrosoftNETCorePlatformsPackageVersion are matching the Latest built packages
 
-            // MicrosoftNETCoreRuntimeCoreCLRPackageVersion 3.0.0-preview-27207-02 (https://raw.githubusercontent.com/dotnet/core-setup/master/dependencies.props)
+            // MicrosoftNETCoreRuntimeCoreCLRPackageVersion 3.0.0-preview-27207-02 (https://raw.githubusercontent.com/dotnet/core-setup/master/Versions.props)
             // Microsoft.NETCore.App 3.0.0-preview-27206-02 (https://raw.githubusercontent.com/dotnet/versions/master/build-info/dotnet/core-setup/master/Latest_Packages.txt)
 
-            // MicrosoftNETCorePlatformsPackageVersion 3.0.0-preview.18606.1 (https://raw.githubusercontent.com/dotnet/core-setup/master/dependencies.props)
+            // MicrosoftNETCorePlatformsPackageVersion 3.0.0-preview.18606.1 (https://raw.githubusercontent.com/dotnet/core-setup/master/Versions.props)
             // Microsoft.NETCore.Platforms 3.0.0-preview.18606.1 (https://raw.githubusercontent.com/dotnet/versions/master/build-info/dotnet/corefx/master/Latest_Packages.txt)
 
             // Delete the files from the previous workflow
 
-            if(
-            File.Exists(_coreSetupCoherenceFilename)
-            || File.Exists(_latestCoreSetupPackagesFilename)
-            || File.Exists(_latestCoreFxPackagesFilename)
-            || File.Exists(_extensionsDependenciesFilename)
-            || File.Exists(_efcoreDependenciesFilename))
+            if (File.Exists(_latestCoreSetupPackagesFilename))
             {
                 Log("Existing files were found. Use 'clean' before 'coherence' to start a new workflow.");
 
@@ -240,49 +250,81 @@ namespace DependenciesBot
 
             Log("# Checking coherence");
 
-            var success = 
-                await DownloadFileAsync(_coreSetupCoherence, _coreSetupCoherenceFilename)
-                && await DownloadFileAsync(_latestCoreSetupPackages, _latestCoreSetupPackagesFilename)
-                && await DownloadFileAsync(_latestCoreFxPackages, _latestCoreFxPackagesFilename);
+            Log($"Saving 'Latest_Packages' for core-setup");
+            await DownloadFileAsync(_latestCoreSetupPackages, _latestCoreSetupPackagesFilename);
+            var latestCoreSetup = File.ReadAllText(_latestCoreSetupPackagesFilename);
 
-            if (!success)
+            var latestNetCoreApp = new Regex(@"^Microsoft\.NETCore\.App\s+([\w\-\.]+)\s*$", RegexOptions.Multiline).Match(latestCoreSetup).Groups[1].Value;
+
+            var versions = await GetRuntimeSha("3.0.0-preview4-27504-10");
+
+            string coreSetupSha;
+            using (var sr = new StringReader(versions))
             {
-                return false;
+                coreSetupSha = sr.ReadLine();
             }
 
-            var coreSetupCoherence = await File.ReadAllTextAsync(_coreSetupCoherenceFilename);
+            Log($"Microsoft.NetCore.App: {latestNetCoreApp} / {coreSetupSha}");
 
-            var expectedCoreSetupVersion = new Regex($@"\<MicrosoftNETCoreRuntimeCoreCLRPackageVersion\>([\w\-\.]+)\</MicrosoftNETCoreRuntimeCoreCLRPackageVersion\>").Match(coreSetupCoherence).Groups[1].Value;
-            var expectedCoreFxVersion = new Regex($@"\<MicrosoftNETCorePlatformsPackageVersion\>([\w\-\.]+)\</MicrosoftNETCorePlatformsPackageVersion\>").Match(coreSetupCoherence).Groups[1].Value;
+            // Other option is to read Microsoft.NETCore.App.deps.json from the runtime file instead of reflecting the attribute
 
-            // Versions as they are currently defined in the core-setup repository
-            var latestCoreSetup = await File.ReadAllTextAsync(_latestCoreSetupPackagesFilename);
-            var latestCoreFx = await File.ReadAllTextAsync(_latestCoreFxPackagesFilename);
+            var versionAttribute = await GetRuntimeAssemblyVersion(latestNetCoreApp, "System.Collections.dll");
 
-            // Versions which are currently available in the feeds
-            var latestCoreSetupVersion = new Regex(@"^Microsoft\.NETCore\.App\s+([\w\-\.]+)\s*$", RegexOptions.Multiline).Match(latestCoreSetup).Groups[1].Value;
-            var latestCoreFxVersion = new Regex(@"^Microsoft\.NETCore\.Platforms\s+([\w\-\.]+)\s*$", RegexOptions.Multiline).Match(latestCoreFx).Groups[1].Value;
+            var coreFxVersion = new Regex(@"^[\d\w\.\-]+").Match(versionAttribute).Value;
+            var coreFxSha = new Regex(@"[\d\w\-]{40}").Match(versionAttribute).Value;
 
-            if (expectedCoreSetupVersion == latestCoreSetupVersion && expectedCoreFxVersion == latestCoreFxVersion)
+            Log($"CoreFX: {coreFxVersion} / {coreFxSha}");
+
+            var version = new Version
             {
-                Log($"Core-Setup: {expectedCoreSetupVersion}");
-                Log($"CoreFx: {expectedCoreFxVersion}");
+                CoreFxVersion = coreFxVersion,
+                CoreFxSha = coreFxSha,
+                MicrosoftNetCoreAppVersion = latestNetCoreApp,
+                CoreSetupSha = coreSetupSha
+            };
 
-                Log($"SUCCESS");
+            File.WriteAllText(_versionsFilename, JsonConvert.SerializeObject(version));
 
-                return true;
-            }
-            else
+            // Search the Latest_Packages for corefx file that corresponds to this version
+            var commitVersion = "master";
+
+            for(;;)
             {
-                Log($"FAILED");
-                Log($"The current core-setup build might not be finalized");
+                Log($"Seeking core-fx Latest_Packages.txt in '{commitVersion}'");
 
-                Log($"Mismatched versions (Versions.props / latest produced package)");
-                Log($"Core-Setup: {expectedCoreSetupVersion} / {latestCoreSetupVersion}");
-                Log($"CoreFx: {expectedCoreFxVersion} / {latestCoreFxVersion}");
+                var contentUrl = $"https://raw.githubusercontent.com/dotnet/versions/{commitVersion}/build-info/dotnet/corefx/master/Latest_Packages.txt";
+                var fileContent = await DownloadContentAsync(contentUrl);
 
-                return false;
+                if (fileContent.Contains(coreFxVersion))
+                {
+                    Log($"Found matching version !");
+                    File.WriteAllText(_latestCoreFxPackagesFilename, fileContent);
+                    break;
+                }
+
+                // Find parent commit version
+                
+                var commitUrl = $"https://api.github.com/repos/dotnet/versions/commits/{commitVersion}";
+                using (var message = new HttpRequestMessage(HttpMethod.Get, commitUrl))
+                {
+                    message.Headers.Add("Accept", "application/vnd.github.v3+json");
+                    message.Headers.Add("User-Agent", "Build-Scripts");
+
+                    var response = await _httpClient.SendAsync(message);
+
+                    response.EnsureSuccessStatusCode();
+
+                    var content = await response.Content.ReadAsStringAsync();
+                    var dom = JObject.Parse(content);
+
+                    commitVersion = dom["parents"][0]["sha"].ToString();
+                }
+
+                // Rate limit requests to GH API
+                await Task.Delay(2000);
             }
+
+            return true;
         }
 
         private static void Log(string text)
@@ -290,8 +332,16 @@ namespace DependenciesBot
             Console.WriteLine("[{0}] {1}", DateTime.UtcNow.ToShortTimeString(), text);
         }
 
-        private static async Task<string> PatchCoreSetupCoreFxVersionAsync(string deps)
+        private static async Task<string> PatchVersionsPropsCoreSetupCoreFxVersionAsync(string deps)
         {
+            // Any tag after this section should not be updated
+            var manualIndex = deps.IndexOf("<PropertyGroup Label=\"Manual\">");
+
+            if (manualIndex < 0)
+            {
+                manualIndex = deps.Length;
+            }
+
             foreach (var source in new[] { _latestCoreSetupPackagesFilename, _latestCoreFxPackagesFilename })
             {
                 // Load latest dependencies from core-setup
@@ -321,7 +371,7 @@ namespace DependenciesBot
                         // Search for this package in the existing dependencies
                         var match = oldDependency.Match(deps);
 
-                        if (match.Success)
+                        if (match.Success && match.Index < manualIndex)
                         {
                             var oldPackageVersion = match.Groups[1].Value;
 
@@ -352,11 +402,73 @@ namespace DependenciesBot
             return deps;
         }
 
+        private static async Task<string> PatchVersionsDetailsCoreSetupCoreFxVersionAsync(string deps)
+        {
+            var doc = XDocument.Parse(deps);
+
+            foreach (var source in new[] { _latestCoreSetupPackagesFilename, _latestCoreFxPackagesFilename })
+            {
+                foreach (var node in doc.Root.Elements().SelectMany(x => x.Elements("Dependency")))
+                {
+                    // Load latest dependencies from core-setup
+                    var latestPackages = await File.ReadAllTextAsync(source);
+
+                    using (var sr = new StringReader(latestPackages))
+                    {
+                        var line = sr.ReadLine();
+
+                        while (!String.IsNullOrEmpty(line))
+                        {
+                            var parts = line.Split(' ');
+
+                            if (parts.Length != 2)
+                            {
+                                throw new ApplicationException($"Expected 2 parts in latest core-setup packages: {line}");
+                            }
+
+                            var packageName = parts[0];
+                            var packageVersion = parts[1];
+
+                            var normalizedPackageName = packageName.Replace(".", "") + "PackageVersion";
+
+                            if (node.Attribute("Name").Value == packageName)
+                            {
+                                var oldPackageVersion = node.Attribute("Version").Value;
+
+                                if (oldPackageVersion != packageVersion)
+                                {
+                                    if (!_ignorePackages.Contains(normalizedPackageName))
+                                    {
+                                        if (oldPackageVersion != packageVersion)
+                                        {
+                                            Console.WriteLine($"[Core-Setup/CoreFx] Updated {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
+                                            deps = deps.Replace(
+                                                $"<Dependency Name=\"{packageName}\" Version=\"{oldPackageVersion}\"",
+                                                $"<Dependency Name=\"{packageName}\" Version=\"{packageVersion}\""
+                                            );
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"Skipped {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
+                                    }
+                                }
+                            }
+
+                            line = sr.ReadLine();
+                        }
+                    }
+                }
+            }
+
+            return deps;
+        }
+
         private static async Task UpdateAspNetCoreDependencies()
         {
-            if (!File.Exists(_efcoreDependenciesFilename))
+            if (!File.Exists(_efcoreVersionsFilename))
             {
-                Log($"{_efcoreDependenciesFilename} not found. Use 'efcore' before 'aspnetcore'.");
+                Log($"{_efcoreVersionsFilename} not found. Use 'efcore' before 'aspnetcore'.");
 
                 return;
             }
@@ -365,12 +477,12 @@ namespace DependenciesBot
             var source = await DownloadContentAsync(_aspnetCoreDependencies);
 
             // Apply version changes from core-setup and corefx
-            var deps = await PatchCoreSetupCoreFxVersionAsync(source);
+            var deps = await PatchVersionsPropsCoreSetupCoreFxVersionAsync(source);
 
             // The versions in aspnet/Extensions are updated at that point to overwrite any from core-setup/corefx
             // This is done such that AspNetCore and Extensions use the same versions
 
-            var extensionsDeps = await File.ReadAllTextAsync(_extensionsDependenciesFilename);
+            var extensionsDeps = await File.ReadAllTextAsync(_extensionsVersionsFilename);
 
             var extensionsDoc = XDocument.Parse(extensionsDeps);
 
@@ -443,7 +555,7 @@ namespace DependenciesBot
             // The versions in aspnet/EntityFramework are updated at that point to overwrite any from core-setup/corefx
             // This is done such that AspNetCore and Extensions use the same versions
 
-            var efCoreDeps = await File.ReadAllTextAsync(_efcoreDependenciesFilename);
+            var efCoreDeps = await File.ReadAllTextAsync(_efcoreVersionsFilename);
 
             var efCoreDoc = XDocument.Parse(efCoreDeps);
 
@@ -522,39 +634,67 @@ namespace DependenciesBot
 
         private static async Task UpdateEfCoreDependencies()
         {
-            if (!File.Exists(_extensionsDependenciesFilename))
+            if (!File.Exists(_extensionsVersionsFilename))
             {
-                Log($"{_extensionsDependenciesFilename} not found. Use 'extensions' before 'efcore'.");
+                Log($"{_extensionsVersionsFilename} not found. Use 'extensions' before 'efcore'.");
 
                 return;
             }
 
-            await DownloadFileAsync(_efCoreDependencies, _efcoreDependenciesFilename);
+            // Load existing dependencies file from aspnet/Extensions
+            await DownloadFileAsync(_efCoreVersions, _efcoreVersionsFilename);
+            await DownloadFileAsync(_efCoreDetails, _efcoreDetailsFilename);
 
-            var source = await File.ReadAllTextAsync(_efcoreDependenciesFilename);
+            var efCoreVersionsSource = await File.ReadAllTextAsync(_efcoreVersionsFilename);
+            var efCoreDetailsSource = await File.ReadAllTextAsync(_efcoreDetailsFilename);
 
             // Apply version changes from core-setup and corefx
-            var deps = await PatchCoreSetupCoreFxVersionAsync(source);
+            efCoreVersionsSource = await PatchVersionsPropsCoreSetupCoreFxVersionAsync(efCoreVersionsSource);
 
+            // Apply versions from the locally built extensions dependencies
+            (efCoreVersionsSource, efCoreDetailsSource) = await ApplyDetailsFiles(_extensionsDetailsFilename, efCoreVersionsSource, efCoreDetailsSource);
+
+            // Seek the latest built Extension packages
+            var extensionsMygetVersion = await GetLatestAspNetCoreMygetVersion(_extensionsPackageId, _extensionsVersionPrefix);
+            var extensionsSha = await GetPackageSha(_extensionsPackageId, extensionsMygetVersion);
+
+            //Update the versions file with extensions version
+            var versions = JsonConvert.DeserializeObject<Version>(File.ReadAllText(_versionsFilename));
+            versions.ExtensionsVersion = extensionsMygetVersion;
+            versions.ExtensionsSha = extensionsSha;
+            File.WriteAllText(_versionsFilename, JsonConvert.SerializeObject(versions));
+
+            // Apply versions from from myget version
+            (efCoreVersionsSource, efCoreDetailsSource) = await ApplySpecificVersion(extensionsMygetVersion, _extensionsPackageNames, efCoreVersionsSource, efCoreDetailsSource);
+
+            // Apply shas
+            efCoreDetailsSource = PatchVersionShas(efCoreDetailsSource);
+
+            File.WriteAllText(_efcoreVersionsFilename, efCoreVersionsSource);
+            File.WriteAllText(_efcoreDetailsFilename, efCoreDetailsSource);
+        }
+
+        private static async Task<(string versions, string details)> ApplyDetailsFiles(string detailsFilename, string sourceVersions, string sourceDetails)
+        {
             // The versions in aspnet/Extensions are updated at that point to overwrite any from core-setup/corefx
-            // This is done such that EfCore and Extensions use the same versions
 
-            var extensionsDeps = await File.ReadAllTextAsync(_extensionsDependenciesFilename);
+            var extensionsDetails = await File.ReadAllTextAsync(detailsFilename);
 
-            var extensionsDoc = XDocument.Parse(extensionsDeps);
+            var extensionsDoc = XDocument.Parse(extensionsDetails);
 
-            var allPackageElements = extensionsDoc.Root.Elements("PropertyGroup").SelectMany(x => x.Elements());
+            var extensionsDependencies = extensionsDoc.Root.Elements("ProductDependencies").SelectMany(x => x.Elements());
 
-            foreach (var el in allPackageElements)
+            foreach (var el in extensionsDependencies)
             {
-                var normalizedPackageName = el.Name.ToString();
-                var packageVersion = el.Value;
+                var packageName = el.Attribute("Name").Value;
+                var normalizedPackageName = packageName.Replace(".", "") + "PackageVersion";
+                var packageVersion = el.Attribute("Version").Value;
 
                 // Performance is not a concern
                 var oldDependency = new Regex($@"\<{normalizedPackageName}\>([\w\-\.]+)\</{normalizedPackageName}\>");
 
                 // Search for this package in the existing dependencies
-                var match = oldDependency.Match(deps);
+                var match = oldDependency.Match(sourceVersions);
 
                 if (match.Success)
                 {
@@ -565,7 +705,7 @@ namespace DependenciesBot
                         if (oldPackageVersion != packageVersion)
                         {
                             Console.WriteLine($"[Extensions deps] Updated {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
-                            deps = deps.Replace(
+                            sourceVersions = sourceVersions.Replace(
                                 $"<{normalizedPackageName}>{oldPackageVersion}</{normalizedPackageName}>",
                                 $"<{normalizedPackageName}>{packageVersion}</{normalizedPackageName}>");
                         }
@@ -577,17 +717,53 @@ namespace DependenciesBot
                 }
             }
 
+            var detailsDoc = XDocument.Parse(sourceDetails);
 
-            // Seek the latest built Extension packages
-            var extensionsMygetVersion = await GetLatestAspNetCoreMygetVersion(_extensionsPackageId, _extensionsVersionPrefix);
+            foreach (var el in extensionsDependencies)
+            {
+                var packageName = el.Attribute("Name").Value;
+                var normalizedPackageName = packageName.Replace(".", "") + "PackageVersion";
+                var packageVersion = el.Attribute("Version").Value;
 
-            foreach(var normalizedPackageName in _extensionsPackageNames)
+                foreach (var node in detailsDoc.Root.Elements().SelectMany(x => x.Elements("Dependency")))
+                {
+                    if (node.Attribute("Name").Value == packageName)
+                    {
+                        var oldPackageVersion = node.Attribute("Version").Value;
+
+                        if (!_ignorePackages.Contains(normalizedPackageName))
+                        {
+                            if (oldPackageVersion != packageVersion)
+                            {
+                                Console.WriteLine($"[Extensions deps] Updated {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
+                                sourceDetails = sourceDetails.Replace(
+                                    $"<Dependency Name=\"{packageName}\" Version=\"{oldPackageVersion}\"",
+                                    $"<Dependency Name=\"{packageName}\" Version=\"{packageVersion}\""
+                                );
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Skipped {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
+                        }
+                    }
+                }
+            }
+
+            return (sourceVersions, sourceDetails);
+        }
+
+        private static async Task<(string versions, string details)> ApplySpecificVersion(string packageVersion, IEnumerable<string> packageNames, string sourceVersions, string sourceDetails)
+        {
+            var detailsDoc = XDocument.Parse(sourceDetails);
+
+            foreach (var normalizedPackageName in packageNames)
             {
                 // Performance is not a concern
                 var oldDependency = new Regex($@"\<{normalizedPackageName}\>([\w\-\.]+)\</{normalizedPackageName}\>");
 
                 // Search for this package in the existing dependencies
-                var match = oldDependency.Match(deps);
+                var match = oldDependency.Match(sourceVersions);
 
                 if (match.Success)
                 {
@@ -595,22 +771,54 @@ namespace DependenciesBot
 
                     if (!_ignorePackages.Contains(normalizedPackageName))
                     {
-                        if (oldPackageVersion != extensionsMygetVersion)
+                        if (oldPackageVersion != packageVersion)
                         {
-                            Console.WriteLine($"[Extensions package] Updated {normalizedPackageName} {oldPackageVersion} -> {extensionsMygetVersion}");
-                            deps = deps.Replace(
+                            Console.WriteLine($"Updated {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
+                            sourceVersions = sourceVersions.Replace(
                                 $"<{normalizedPackageName}>{oldPackageVersion}</{normalizedPackageName}>",
-                                $"<{normalizedPackageName}>{extensionsMygetVersion}</{normalizedPackageName}>");
+                                $"<{normalizedPackageName}>{packageVersion}</{normalizedPackageName}>");
                         }
                     }
                     else
                     {
-                        Console.WriteLine($"Skipped {normalizedPackageName} {oldPackageVersion} -> {extensionsMygetVersion}");
+                        Console.WriteLine($"Skipped {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
+                    }
+                }
+
+                // DETAILS FILE
+
+                var depdendencies = detailsDoc.Root.Elements("ProductDependencies").SelectMany(x => x.Elements());
+
+                foreach (var node in depdendencies)
+                {
+                    var packageName = node.Attribute("Name").Value;
+
+                    if (normalizedPackageName != packageName.Replace(".", "") + "PackageVersion")
+                    {
+                        continue;
+                    }
+
+                    var oldPackageVersion = node.Attribute("Version").Value;
+
+                    if (!_ignorePackages.Contains(normalizedPackageName))
+                    {
+                        if (oldPackageVersion != packageVersion)
+                        {
+                            Console.WriteLine($"[Extensions deps] Updated {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
+                            sourceDetails = sourceDetails.Replace(
+                                $"<Dependency Name=\"{packageName}\" Version=\"{oldPackageVersion}\"",
+                                $"<Dependency Name=\"{packageName}\" Version=\"{packageVersion}\""
+                            );
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Skipped {normalizedPackageName} {oldPackageVersion} -> {packageVersion}");
                     }
                 }
             }
 
-            File.WriteAllText(_efcoreDependenciesFilename, deps);
+            return (sourceVersions, sourceDetails);
         }
 
         private static async Task UpdateExtensionsDependencies()
@@ -623,15 +831,55 @@ namespace DependenciesBot
             }
 
             // Load existing dependencies file from aspnet/Extensions
-            await DownloadFileAsync(_extensionsDependencies, _extensionsDependenciesFilename);
+            await DownloadFileAsync(_extensionsVersions, _extensionsVersionsFilename);
+            await DownloadFileAsync(_extensionsDetails, _extensionsDetailsFilename);
 
-            var source = await File.ReadAllTextAsync(_extensionsDependenciesFilename);
+            var versions = await File.ReadAllTextAsync(_extensionsVersionsFilename);
 
-            var deps = await PatchCoreSetupCoreFxVersionAsync(source);
+            Log("UPDATING Extensions/Versions.props");
 
-            File.WriteAllText(_extensionsDependenciesFilename, deps);
+            versions = await PatchVersionsPropsCoreSetupCoreFxVersionAsync(versions);
+            File.WriteAllText(_extensionsVersionsFilename, versions);
+
+            var details = await File.ReadAllTextAsync(_extensionsDetailsFilename);
+
+            Log("UPDATING Extensions/Version.Details.props");
+
+            details = await PatchVersionsDetailsCoreSetupCoreFxVersionAsync(details);
+            details = PatchVersionShas(details);
+
+            File.WriteAllText(_extensionsDetailsFilename, details);
 
             Log("SUCCESS");
+        }
+
+        private static string PatchVersionShas(string source)
+        {
+            var versions = JsonConvert.DeserializeObject<Version>(File.ReadAllText(_versionsFilename));
+            var doc = XDocument.Parse(source);
+
+            foreach (var node in doc.Root.Elements().SelectMany(x => x.Elements("Dependency")))
+            {
+                switch(node.Element("Uri").Value)
+                {
+                    case "https://github.com/dotnet/corefx":
+                        var oldCoreFxSha = node.Element("Sha").Value;
+                        source = source.Replace($"<Sha>{oldCoreFxSha}</Sha>", $"<Sha>{versions.CoreFxSha}</Sha>");
+                        break;
+
+                    case "https://github.com/dotnet/core-setup":
+                        var oldCoreSetupSha = node.Element("Sha").Value;
+                        source = source.Replace($"<Sha>{oldCoreSetupSha}</Sha>", $"<Sha>{versions.CoreSetupSha}</Sha>");
+                        break;
+
+                    case "https://github.com/aspnet/Extensions":
+                        var oldExtensionsSha = node.Element("Sha").Value;
+                        source = source.Replace($"<Sha>{oldExtensionsSha}</Sha>", $"<Sha>{versions.ExtensionsSha}</Sha>");
+                        break;
+                }
+            }
+
+            return source;
         }
 
         private static void LoadSettings(IConfiguration config)
@@ -782,7 +1030,7 @@ namespace DependenciesBot
 
         private static async Task<bool> DownloadFileAsync(string url, string outputPath, int maxRetries = 3, int timeout = 5)
         {
-            Log($"Downloading '{url}'");
+            //Log($"Downloading '{url}'");
 
             for (var i = 0; i < maxRetries; ++i)
             {
@@ -804,7 +1052,7 @@ namespace DependenciesBot
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Error while downloading {url}:");
+                    Console.WriteLine($"ERROR: Failed downloading '{url}':");
                     Console.WriteLine(e);
                 }
             }
@@ -829,6 +1077,192 @@ namespace DependenciesBot
             }
 
             throw new ApplicationException($"Error while downloading {url} after {maxRetries} attempts");
+        }
+
+        private static async Task<string> GetRuntimeAssemblyVersion(string netCoreAppVersion, string assemblyName)
+        {
+            var packagePath = Path.GetTempFileName();
+
+            try
+            {
+                // Download the runtime
+
+                var netCoreAppUrl = String.Format(_netCoreUrlPrefix, netCoreAppVersion);
+                if (!await DownloadFileAsync(netCoreAppUrl, packagePath))
+                {
+                    return null;
+                }
+
+                // Extract the .nuspec file
+
+                using (var archive = ZipFile.OpenRead(packagePath))
+                {
+                    var versionAssemblyPath = Path.GetTempFileName();
+
+                    try
+                    {
+                        var entry = archive.GetEntry($@"shared\Microsoft.NETCore.App\{netCoreAppVersion}\{assemblyName}");
+                        if (entry == null)
+                        {
+                            entry = archive.GetEntry($@"shared/Microsoft.NETCore.App/{netCoreAppVersion}/{assemblyName}");
+                        }
+
+                        entry.ExtractToFile(versionAssemblyPath, true);
+
+                        using (var assembly = Mono.Cecil.AssemblyDefinition.ReadAssembly(versionAssemblyPath))
+                        {
+                            var informationalVersionAttribute = assembly.CustomAttributes.Where(x => x.AttributeType.Name == "AssemblyInformationalVersionAttribute").FirstOrDefault();
+                            var argumentValule = informationalVersionAttribute.ConstructorArguments[0].Value.ToString();
+
+                            return argumentValule;
+                        }
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            File.Delete(versionAssemblyPath);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(packagePath);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"ERROR: Failed to delete file {packagePath}");
+                    Console.WriteLine(e);
+                }
+            }
+        }
+
+        private static async Task<string> GetPackageSha(string packageId, string packageVersion)
+        {
+            var packagePath = Path.GetTempFileName();
+
+            try
+            {
+                // Download the runtime
+
+                var packageUrl = $"https://dotnet.myget.org/F/aspnetcore-dev/api/v2/package/{packageId}/{packageVersion}";
+                if (!await DownloadFileAsync(packageUrl, packagePath))
+                {
+                    return null;
+                }
+
+                // Extract the .nuspec file
+
+                using (var archive = ZipFile.OpenRead(packagePath))
+                {
+                    var nuspecPath = Path.GetTempFileName();
+
+                    try
+                    {
+                        var entry = archive.GetEntry($"{packageId}.nuspec");
+                        entry.ExtractToFile(nuspecPath, true);
+                        var root = XDocument.Parse(File.ReadAllText(nuspecPath)).Root;
+
+                        XNamespace xmlns = root.Attribute("xmlns").Value;
+                        return root
+                            .Element(xmlns + "metadata")
+                            .Element(xmlns + "repository")
+                            .Attribute("commit").Value;
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            File.Delete(nuspecPath);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(packagePath);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"ERROR: Failed to delete file {packagePath}");
+                    Console.WriteLine(e);
+                }
+            }
+        }
+
+        private static async Task<string> GetRuntimeSha(string netCoreAppVersion)
+        {
+            var packagePath = Path.GetTempFileName();
+
+            try
+            {
+                // Download the runtime
+
+                var netCoreAppUrl = String.Format(_netCoreUrlPrefix, netCoreAppVersion);
+                if (!await DownloadFileAsync(netCoreAppUrl, packagePath))
+                {
+                    return null;
+                }
+
+                // Extract the .nuspec file
+
+                using (var archive = ZipFile.OpenRead(packagePath))
+                {
+                    var versionAssemblyPath = Path.GetTempFileName();
+
+                    try
+                    {
+                        var entry = archive.GetEntry($@"shared\Microsoft.NETCore.App\{netCoreAppVersion}\.version")
+                            ?? archive.GetEntry($@"shared/Microsoft.NETCore.App/{netCoreAppVersion}/.version");
+
+                        entry.ExtractToFile(versionAssemblyPath, true);
+                        return File.ReadAllText(versionAssemblyPath);
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            File.Delete(versionAssemblyPath);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(packagePath);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"ERROR: Failed to delete file {packagePath}");
+                    Console.WriteLine(e);
+                }
+            }
+        }
+
+        private class Version
+        {
+            public string CoreFxVersion { get; set; }
+            public string CoreFxSha { get; set; }
+            public string MicrosoftNetCoreAppVersion { get; set; }
+            public string CoreSetupSha { get; set; }
+            public string ExtensionsVersion { get; set; }
+            public string ExtensionsSha { get; set; }
         }
     }
 }
