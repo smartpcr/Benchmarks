@@ -1,0 +1,1 @@
+docker run -d --log-opt max-size=10m --log-opt max-file=3 --name benchmarks-server --restart always -p 5001:5001 -p 5000:5000 -p 8080:8080 benchmarks powershell "dotnet published/BenchmarksServer.dll -n 10.10.10.5 --url http://*:5001 --hardware PHYSICAL --hardware-version CITRINE --postgresql foo --mysql foo --mssql foo --mongodb foo"

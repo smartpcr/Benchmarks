@@ -1904,7 +1904,7 @@ namespace BenchmarkServer
         {
             var workingDirectory = Path.Combine(benchmarksRepo, Path.GetDirectoryName(job.Source.Project));
             var scheme = (job.Scheme == Scheme.H2 || job.Scheme == Scheme.Https) ? "https" : "http";
-            var serverUrl = $"{scheme}://{hostname}:{job.Port}";
+            var serverUrl = $"{scheme}://*:{job.Port}";
             var executable = GetDotNetExecutable(dotnetHome);
             var projectFilename = Path.GetFileNameWithoutExtension(job.Source.Project);
             var benchmarksDll = Path.Combine("published", $"{projectFilename}.dll");
