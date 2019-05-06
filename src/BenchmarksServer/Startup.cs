@@ -188,7 +188,7 @@ namespace BenchmarkServer
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc();
+            services.AddMvc(options => { options.EnableEndpointRouting = false; }).AddNewtonsoftJson();
 
             services.AddSingleton(_jobs);
         }
