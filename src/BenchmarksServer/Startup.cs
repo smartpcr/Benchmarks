@@ -1653,7 +1653,14 @@ namespace BenchmarkServer
                 }
                 else
                 {
-                    buildParameters += "-r linux-x64 ";
+                    if (job.Hardware == Hardware.ARM64)
+                    {
+                        buildParameters += "-r linux-x64 ";
+                    }
+                    else
+                    {
+                        buildParameters += "-r linux-arm64 ";
+                    }                    
                 }
             }
 
