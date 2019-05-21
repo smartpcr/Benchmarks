@@ -37,10 +37,10 @@ namespace Benchmarks
 
             Console.WriteLine($"Current directory: {Directory.GetCurrentDirectory()}");
             Console.WriteLine($"WebHostBuilder loading from: {typeof(WebHostBuilder).GetTypeInfo().Assembly.Location}");
-            Console.WriteLine($"WebHostBuilder version: {typeof(WebHostBuilder).GetTypeInfo().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.ToString()}");
+            Console.WriteLine($"WebHostBuilder version: {typeof(WebHostBuilder).GetTypeInfo().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.ToString()}");
 
-            Console.WriteLine($"NetCore.App location: {typeof(string).GetTypeInfo().Assembly.Location}");
-            Console.WriteLine($"NetCore.App version: {typeof(string).GetTypeInfo().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.ToString()}");
+            Console.WriteLine($"NetCore.App location: {typeof(Console).GetTypeInfo().Assembly.Location}");
+            Console.WriteLine($"NetCore.App version: {typeof(Console).GetTypeInfo().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.ToString()}");
 
             var config = new ConfigurationBuilder()
                 .AddJsonFile("hosting.json", optional: true)
